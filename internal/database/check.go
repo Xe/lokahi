@@ -41,7 +41,6 @@ func (c Check) F() ln.F {
 
 // AsProto converts this to the protobuf representation.
 func (c Check) AsProto() *lokahi.Check {
-
 	return &lokahi.Check{
 		Id:          c.UUID,
 		Url:         c.URL,

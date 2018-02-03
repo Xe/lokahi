@@ -141,7 +141,16 @@ func (l *LocalRun) Checks(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lok
 }
 
 func (l *LocalRun) Stats(ctx context.Context, _ *lokahiadmin.Nil) (*lokahiadmin.HistogramData, error) {
-	result := &lokahiadmin.HistogramData{}
+	result := &lokahiadmin.HistogramData{
+		MaxNanoseconds:  l.timing.Max(),
+		MinNanoseconds:  l.timing.Min(),
+		MeanNanoseconds: int64(l.timing.Mean()),
+		Stddev:          int64(l.timing.StdDev()),
+		P50Nanoseconds:  int64(l.timing.ValueAtQuantile(50)),
+		P75Nanoseconds:  int64(l.timing.ValueAtQuantile(75)),
+		P95Nanoseconds:  int64(l.timing.ValueAtQuantile(95)),
+		P99Nanoseconds:  int64(l.timing.ValueAtQuantile(99)),
+	}
 
 	return result, nil
 }
