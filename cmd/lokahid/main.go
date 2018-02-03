@@ -18,6 +18,7 @@ import (
 	"github.com/heroku/x/scrub"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/robfig/cron"
 )
 
 type config struct {
@@ -70,9 +71,18 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
+	cr := cron.New()
 	cks := &lokahiserver.Checks{DB: db}
 	lr := &lokahiadminserver.LocalRun{HC: &http.Client{}, DB: db}
 	mux := http.NewServeMux()
+
+	cr.AddFunc("@every 1m", func() {
+		err := lr.Minutely()
+		if err != nil {
+			ln.Error(context.Background(), err)
+		}
+	})
+	cr.Start()
 
 	mux.Handle(lokahiadmin.RunLocalPathPrefix, lokahiadmin.NewRunLocalServer(lr, makeLnHooks()))
 	mux.Handle(lokahi.ChecksPathPrefix, lokahi.NewChecksServer(cks, makeLnHooks()))

@@ -1,8 +1,10 @@
 package lokahiadminserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -10,9 +12,11 @@ import (
 
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/internal/database"
+	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/Xe/uuid"
 	"github.com/codahale/hdrhistogram"
+	"github.com/gogo/protobuf/proto"
 	"github.com/jinzhu/gorm"
 )
 
@@ -25,6 +29,78 @@ type LocalRun struct {
 	DB *gorm.DB
 
 	timing *hdrhistogram.Histogram
+}
+
+func (l *LocalRun) Minutely() error {
+	var checks []database.Check
+
+	err := l.DB.Where("every = 60").Find(&checks).Error
+	if err != nil {
+		return err
+	}
+
+	cids := &lokahiadmin.CheckIDs{}
+
+	for _, ck := range checks {
+		cids.Ids = append(cids.Ids, ck.UUID)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+
+	result, err := l.Run(ctx, cids)
+	if err != nil {
+		return err
+	}
+
+	logErr := func(err error, cid, u string) {
+		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
+	}
+
+	for cid, health := range result.Results {
+		var ck database.Check
+
+		for _, check := range checks {
+			if check.UUID == cid {
+				ck = check
+				break
+			}
+		}
+
+		// unknown???
+		if ck.UUID == "" {
+			continue
+		}
+
+		cs := &lokahi.CheckStatus{
+			Check: ck.AsProto(),
+			LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
+		}
+
+		data, err := proto.Marshal(cs)
+		if err != nil {
+			logErr(err, cid, ck.WebhookURL)
+			continue
+		}
+
+		buf := bytes.NewBuffer(data)
+
+		req, err := http.NewRequest("POST", ck.WebhookURL, buf)
+		if err != nil {
+			logErr(err, cid, ck.WebhookURL)
+			continue
+		}
+
+		resp, err := l.HC.Do(req)
+		if err != nil {
+			logErr(err, cid, ck.WebhookURL)
+			return
+		}
+
+		if resp.StatusCode%100 != 2 {
+			return fmt.Errorf("lokahiadminserver: %s gave HTTP status %d", ck.WebhookURL, resp.StatusCode)
+		}
+	}
 }
 
 func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_Health, database.Check) {
