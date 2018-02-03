@@ -2,6 +2,18 @@
 
 
 [[projects]]
+  name = "github.com/Xe/ln"
+  packages = ["."]
+  revision = "466e05b2ef3e48ce08a367b6aaac09ee29a124e5"
+  version = "v0.1"
+
+[[projects]]
+  name = "github.com/caarlos0/env"
+  packages = ["."]
+  revision = "7cd7992b3bc86f920394f8de92c13900da1a46b7"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
@@ -12,19 +24,35 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/jinzhu/gorm"
+  packages = [
+    ".",
+    "dialects/postgres"
+  ]
+  revision = "5174cc5c242a728b435ea2be8a2f7f998e15429b"
+  version = "v1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/inflection"
+  packages = ["."]
+  revision = "1c35d901db3da928c72a72d8458480cc9ade058f"
+
+[[projects]]
   branch = "master"
   name = "github.com/jtolds/qod"
   packages = ["."]
   revision = "3abb44dfc7ba8b5cdfdb634786f57e78c7004e1c"
 
 [[projects]]
-  name = "github.com/magefile/mage"
+  branch = "master"
+  name = "github.com/lib/pq"
   packages = [
-    "mg",
-    "types"
+    ".",
+    "hstore",
+    "oid"
   ]
-  revision = "ab3ca2f6f85577d7ec82e0a6df721147a2e737f9"
-  version = "v2.0.1"
+  revision = "88edab0803230a3898347e77b474f8c1820a1f20"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -51,6 +79,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "04fc81f11fad4cf013513a8a0dc2fa609f7e19b5404444084bcdf1d71b9f24dc"
+  inputs-digest = "02c93224b341ba9f9bc1bbf5b7f37ed706c4302522dcddca0bed6828325cb380"
   solver-name = "gps-cdcl"
   solver-version = 1
