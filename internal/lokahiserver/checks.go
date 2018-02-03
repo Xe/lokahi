@@ -21,7 +21,8 @@ type Checks struct {
 func (c *Checks) Create(ctx context.Context, opts *lokahi.CreateOpts) (*lokahi.Check, error) {
 	dck := database.Check{
 		UUID:        uuid.New(),
-		URL:         opts.WebhookUrl,
+		URL:         opts.Url,
+		WebhookURL:  opts.WebhookUrl,
 		Every:       int(opts.Every),
 		PlaybookURL: opts.PlaybookUrl,
 		State:       lokahi.Check_INIT.String(),

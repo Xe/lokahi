@@ -1,6 +1,7 @@
 package database
 
 import (
+	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/jinzhu/gorm"
 )
@@ -26,6 +27,16 @@ type Check struct {
 	PlaybookURL string
 	// State is the check's last known state.
 	State string
+}
+
+func (c Check) F() ln.F {
+	return ln.F{
+		"check_id":    c.ID,
+		"check_uuid":  c.UUID,
+		"check_url":   c.URL,
+		"check_every": c.Every,
+		"check_state": c.State,
+	}
 }
 
 // AsProto converts this to the protobuf representation.

@@ -6,6 +6,7 @@ option go_package = "lokahiadmin";
 
 service RunLocal {
   rpc Checks(CheckIDs) returns (Run);
+  rpc Stats(Nil) returns (HistogramData);
 }
 
 message CheckIDs {
@@ -26,4 +27,40 @@ message Run {
   CheckIDs cids = 2;
   bool finished = 3;
   map<string, Health> results = 4;
+  int64 start_time_unix = 5;
+  int64 elapsed_nanoseconds = 6;
+}
+
+message Nil{}
+
+// HistogramData contains information from the HDR histogram maintained for
+// each check.
+message HistogramData {
+  // max_nanoseconds is the maximum http web response time in nanoseconds.
+  int64 max_nanoseconds = 1;
+
+  // min_nanoseconds is the minimum http web response time in nanoseconds.
+  int64 min_nanoseconds = 2;
+
+  // mean_nanoseconds is the mean http web response time in nanoseconds.
+  int64 mean_nanoseconds = 3;
+
+  // stddev is the standard deviation from the mean.
+  int64 stddev = 4;
+
+  // p50_nanoseconds is the 50th percentile of the http web response times in
+  // nanoseconds.
+  int64 p50_nanoseconds = 5;
+
+  // p75_nanoseconds is the 75th percentile of the http web response times in
+  // nanoseconds.
+  int64 p75_nanoseconds = 6;
+
+  // p95_nanoseconds is the 95th percentile of the http web response times in
+  // nanoseconds.
+  int64 p95_nanoseconds = 7;
+
+  // p99_nanoseconds is the 95th percentile of the http web response times in
+  // nanoseconds.
+  int64 p99_nanoseconds = 8;
 }

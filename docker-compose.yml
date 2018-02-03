@@ -10,6 +10,8 @@ services:
   lokahid:
     build: .
     restart: always
+    depends_on:
+      - "db"
     environment:
       NATS_URL: nats://nats:4222
       DATABASE_URL: postgres://postgres:hunter2@db:5432/postgres?sslmode=disable

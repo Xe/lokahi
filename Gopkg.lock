@@ -20,6 +20,12 @@
   version = "v3.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/codahale/hdrhistogram"
+  packages = ["."]
+  revision = "3a0bb77429bd3a61596f5e8a3172445844342120"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
@@ -65,6 +71,18 @@
   name = "github.com/jtolds/qod"
   packages = ["."]
   revision = "3abb44dfc7ba8b5cdfdb634786f57e78c7004e1c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/text"
+  packages = ["."]
+  revision = "7cafcd837844e784b526369c9bce262804aebc60"
 
 [[projects]]
   branch = "master"
@@ -123,6 +141,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f3f65bd5a07edffc757c7a78e7c7ba888b79afd3062cbfb18fe13b661b3d9a03"
+  inputs-digest = "ab9991ddd8d41d77b5844c3062b96e1cdea71ff2e38012e092da4f4f2f17db19"
   solver-name = "gps-cdcl"
   solver-version = 1

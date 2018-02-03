@@ -9,6 +9,7 @@ import (
 
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/internal/database"
+	"github.com/Xe/lokahi/internal/lokahiadminserver"
 	"github.com/Xe/lokahi/internal/lokahiserver"
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/Xe/lokahi/rpc/lokahiadmin"
@@ -60,19 +61,17 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
-	err = db.AutoMigrate(&database.Check{}).Error
+	err = db.AutoMigrate(database.Check{}).Error
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}
-	err = db.AutoMigrate(&database.Run{}).Error
+	err = db.AutoMigrate(database.Run{}).Error
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}
 
-	cks := &lokahiserver.Checks{
-		DB: db,
-	}
-	lr := &LocalRunner{db: db, cli: &http.Client{}}
+	cks := &lokahiserver.Checks{DB: db}
+	lr := &lokahiadminserver.LocalRun{HC: &http.Client{}, DB: db}
 	mux := http.NewServeMux()
 
 	mux.Handle(lokahiadmin.RunLocalPathPrefix, lokahiadmin.NewRunLocalServer(lr, makeLnHooks()))
