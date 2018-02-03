@@ -6,7 +6,7 @@
     },
     {
       "Repository": "github.com/twitchtv/twirp/protoc-gen-twirp",
-      "Commit": "dff337b186d4ea1ada1d1e54ef422fdbcfa3113d"
+      "Commit": "125be91eedbde9ffaec9838e5ab7d94ef2760444"
     },
     {
       "Repository": "github.com/golang/protobuf/protoc-gen-go",
