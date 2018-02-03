@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+// lokahiadmin is the administrative/backend API for lambda to talk to lokahi.
+package github.xe.lokahi.admin;
+option go_package = "lokahiadmin";
+

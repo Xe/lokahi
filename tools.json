@@ -1,0 +1,25 @@
+{
+  "Tools": [
+    {
+      "Repository": "github.com/rakyll/statik",
+      "Commit": "016ca6fdb1b26618ff8f53fbd1109ff834524f23"
+    },
+    {
+      "Repository": "github.com/twitchtv/twirp/protoc-gen-twirp",
+      "Commit": "dff337b186d4ea1ada1d1e54ef422fdbcfa3113d"
+    },
+    {
+      "Repository": "github.com/golang/protobuf/protoc-gen-go",
+      "Commit": "925541529c1fa6821df4e44ce2723319eb2be768"
+    },
+    {
+      "Repository": "github.com/golang/dep",
+      "Commit": "37d9ea0ac16f0e0a05afc3b60e1ac8c364b6c329"
+    },
+    {
+      "Repository": "github.com/magefile/mage",
+      "Commit": "d4ed947d0e4d6b88c448f3ac09910852a7b56a4c"
+    }
+  ],
+  "RetoolVersion": "1.3.5"
+}

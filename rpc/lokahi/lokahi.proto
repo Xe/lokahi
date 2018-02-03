@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+// lokahi is a HTTP health checking and response time monitoring service.
+package github.xe.lokahi;
+option go_package = "lokahi";
+
+// Checks manages and schedules web application health checks.
+service Checks {
+  // Create creates a new health check with the given options.
+  rpc Create(CreateOpts) returns (Check);
+
+  // Delete removes a check by ID and returns the data that was deleted.
+  rpc Delete(CheckID) returns (Check);
+
+  // List returns a page of checks based on a few options.
+  rpc List(ListOpts) returns (ChecksPage);
+
+  // Put updates a Check.
+  rpc Put(Check) returns (Check);
+
+  // Status returns the detailed histogram status of a check.
+  rpc Status(CheckID) returns (CheckStatus);
+}
+
+// CreateOpts contains arguments used to construct a Check.
+message CreateOpts {
+  // url is the HTTP/S url that will be monitored.
+  string url = 1;
+
+  // webhook_urls are the HTTP/S urls that will be HTTPS POST-ed to with the body
+  // containing a protobuf-encoded CheckStatus message.
+  repeated string webhook_urls = 2;
+
+  // health checks happen every number of seconds (minimum: 60, maximum: 600).
+  int32 every = 3;
+
+  // playbook_url is the playbook URL that will be passed to status webhooks.
+  string playbook_url = 4;
+}
+
+// CheckID is a small wrapper around a Check ID.
+message CheckID {
+  // id is the Check id.
+  string id = 1;
+}
+
+// Check is an individual HTTP check.
+message Check {
+  // State is the finite state machine state.
+  enum State {
+    INIT = 0;
+    UP = 1;
+    DOWN = 2;
+    ERROR = 3;
+  }
+
+  // id is the unique id of this check.
+  string id = 1;
+
+  // url is the HTTP/S url that will be monitored.
+  string url = 2;
+
+  // webhook_url is the HTTP/S url that will be HTTPS POST-ed to with the body
+  // containing a protobuf-encoded CheckStatus message.
+  string webhook_url = 3;
+
+  // webhook_response_time_nanoseconds is last the response time of the webhook.
+  int64 webhook_response_time_nanoseconds = 4;
+
+  // health checks happen every number of seconds (minimum: 60, maximum: 600).
+  int32 every = 5;
+
+  // playbook_url is the playbook URL that will be passed to status webhooks.
+  string playbook_url = 6;
+
+  // state is the current state of this uptime check.
+  State state = 7;
+}
+
+// CheckStatus contains detailed information about the uptime status of a Check.
+// This is POST-ed to webhook recipients.
+message CheckStatus {
+  // check is the information for the relevant Check.
+  Check check = 1;
+
+  // last_response_time_nanoseconds is the last http web response time from the
+  // Check's monitoring URL in nanoseconds.
+  int64 last_response_time_nanoseconds = 2;
+
+  // histogram_data is the detailed histogram data for this check.
+  HistogramData histogram_data = 3;
+}
+
+// ListOpts contains options to the service Checks method List.
+message ListOpts {
+  // count is the number of checks that will be returned.
+  int32 count = 1;
+
+  // offset is the number of checks that will be offset.
+  int32 offset = 2;
+
+  // include_status includes the histogram data for each check result.
+  // This is O(scary). Use this with care.
+  bool include_status = 3;
+}
+
+// ChecksPage is a paginated Check list response.
+message ChecksPage {
+  // Result is an individual List result.
+  message Result {
+    // check is the individual check being listed.
+    Check check = 1;
+
+    // histogram_data is the detailed histogram data for this check, this is
+    // nornally not set unless include_status is set in ListOpts.
+    HistogramData histogram_data = 2;
+  }
+
+  repeated Result results = 1;
+}
+
+// HistogramData contains information from the HDR histogram maintained for
+// each check.
+message HistogramData {
+  // max_nanoseconds is the maximum http web response time in nanoseconds.
+  double max_nanoseconds = 1;
+
+  // min_nanoseconds is the minimum http web response time in nanoseconds.
+  double min_nanoseconds = 2;
+
+  // mean_nanoseconds is the mean http web response time in nanoseconds.
+  double mean_nanoseconds = 3;
+
+  // stddev is the standard deviation from the mean.
+  double stddev = 4;
+
+  // p50_nanoseconds is the 50th percentile of the http web response times in
+  // nanoseconds.
+  double p50_nanoseconds = 5;
+
+  // p75_nanoseconds is the 75th percentile of the http web response times in
+  // nanoseconds.
+  double p75_nanoseconds = 6;
+
+  // p95_nanoseconds is the 95th percentile of the http web response times in
+  // nanoseconds.
+  double p95_nanoseconds = 7;
+
+  // p99_nanoseconds is the 95th percentile of the http web response times in
+  // nanoseconds.
+  double p99_nanoseconds = 8;
+}
