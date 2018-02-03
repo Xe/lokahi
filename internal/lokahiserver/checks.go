@@ -74,7 +74,22 @@ func (c *Checks) getCheck(ctx context.Context, id string) (*database.Check, erro
 
 // List returns a page of checks based on a few options.
 func (c *Checks) List(ctx context.Context, opts *lokahi.ListOpts) (*lokahi.ChecksPage, error) {
-	return nil, errNotImpl
+	var dchecks []database.Check
+
+	err := c.DB.
+		Limit(int(opts.Count)).
+		Offset(int(opts.Page * opts.Count)).Find(&dchecks).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := &lokahi.ChecksPage{}
+
+	for _, dc := range dchecks {
+		result.Results = append(result.Results, &lokahi.ChecksPage_Result{Check: dc.AsProto()})
+	}
+
+	return result, nil
 }
 
 // Put updates a Check.
