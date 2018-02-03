@@ -24,6 +24,16 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/heroku/x"
+  packages = [
+    "hmetrics",
+    "hmetrics/onload",
+    "scrub"
+  ]
+  revision = "705849e307dd75c91728463dea5bfd08ef493e64"
+
+[[projects]]
   name = "github.com/jinzhu/gorm"
   packages = [
     ".",
@@ -76,9 +86,19 @@
   revision = "125be91eedbde9ffaec9838e5ab7d94ef2760444"
   version = "v5.2.0"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = [
+    "context",
+    "internal/timeseries",
+    "trace"
+  ]
+  revision = "2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "02c93224b341ba9f9bc1bbf5b7f37ed706c4302522dcddca0bed6828325cb380"
+  inputs-digest = "b4866f06c61f356171110033b00babeb55e85e11b1ba9c84e3e36bdd0f25b57c"
   solver-name = "gps-cdcl"
   solver-version = 1
