@@ -52,12 +52,18 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
+	ctx = ln.WithF(ctx, cfg.F())
+
 	db, err := gorm.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}
 
 	err = db.AutoMigrate(&database.Check{}).Error
+	if err != nil {
+		ln.FatalErr(ctx, err)
+	}
+	err = db.AutoMigrate(&database.Run{}).Error
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}

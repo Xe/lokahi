@@ -7,9 +7,6 @@ services:
     environment:
       POSTGRES_PASSWORD: hunter2
 
-  nats:
-    image: nats:latest
-
   lokahid:
     build: .
     restart: always

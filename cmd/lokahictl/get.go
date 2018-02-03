@@ -25,7 +25,7 @@ var getCmd = &cobra.Command{
 
 		checks := lokahi.NewChecksProtobufClient(surl, &http.Client{})
 
-		chk, err := checks.Delete(ctx, &lokahi.CheckID{Id: args[0]})
+		chk, err := checks.Get(ctx, &lokahi.CheckID{Id: args[0]})
 		if err != nil {
 			return err
 		}
