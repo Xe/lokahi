@@ -12,6 +12,9 @@ service Checks {
   // Delete removes a check by ID and returns the data that was deleted.
   rpc Delete(CheckID) returns (Check);
 
+  // Get returns information on a check by ID.
+  rpc Get(CheckID) returns (Check);
+
   // List returns a page of checks based on a few options.
   rpc List(ListOpts) returns (ChecksPage);
 
@@ -27,9 +30,9 @@ message CreateOpts {
   // url is the HTTP/S url that will be monitored.
   string url = 1;
 
-  // webhook_urls are the HTTP/S urls that will be HTTPS POST-ed to with the body
+  // webhook_url is the HTTP/S url that will be HTTPS POST-ed to with the body
   // containing a protobuf-encoded CheckStatus message.
-  repeated string webhook_urls = 2;
+  string webhook_url = 2;
 
   // health checks happen every number of seconds (minimum: 60, maximum: 600).
   int32 every = 3;

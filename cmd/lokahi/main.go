@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/Xe/ln"
+	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/internal/lokahiserver"
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/caarlos0/env"
@@ -52,6 +53,11 @@ func main() {
 	}
 
 	db, err := gorm.Open("postgres", cfg.DatabaseURL)
+	if err != nil {
+		ln.FatalErr(ctx, err)
+	}
+
+	err = db.AutoMigrate(&database.Check{})
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}
