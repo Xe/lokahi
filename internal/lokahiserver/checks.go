@@ -42,7 +42,7 @@ func (c *Checks) Delete(ctx context.Context, cid *lokahi.CheckID) (*lokahi.Check
 		return nil, err
 	}
 
-	err = c.DB.Where("uuid = ?", dck.UUID).Delete(database.Check{}).Error
+	err = c.DB.Unscoped().Where("uuid = ?", dck.UUID).Delete(database.Check{}).Error
 	if err != nil {
 		return nil, err
 	}

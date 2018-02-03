@@ -78,10 +78,10 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(createCmd)
-
 	createCmd.Flags().StringVarP(&createURL, "url", "u", "", "URL to monitor")
 	createCmd.Flags().StringVarP(&createWebhookURL, "webhook-url", "w", "", "webhook URL to post updates to")
 	createCmd.Flags().IntVarP(&createEvery, "every", "e", 0, "")
 	createCmd.Flags().StringVarP(&createPlaybookURL, "playbook-url", "p", "", "playbook URL with operational instructions")
+
+	rootCmd.AddCommand(createCmd)
 }
