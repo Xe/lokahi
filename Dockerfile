@@ -11,4 +11,5 @@ RUN retool build \
 FROM xena/alpine
 COPY --from=0 /root/go/src/github.com/Xe/lokahi/bin/lokahid /usr/local/bin/lokahid
 COPY --from=0 /root/go/src/github.com/Xe/lokahi/bin/lokahictl /usr/local/bin/lokahictl
+COPY --from=0 /root/go/src/github.com/Xe/lokahi/bin/sample_hook /usr/local/bin/sample_hook
 CMD /usr/local/bin/lokahid

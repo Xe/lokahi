@@ -47,7 +47,7 @@ func (c Check) AsProto() *lokahi.Check {
 		WebhookUrl:  c.WebhookURL,
 		Every:       int32(c.Every),
 		PlaybookUrl: c.PlaybookURL,
-		State:       lokahi.Check_INIT,
+		State:       lokahi.Check_State(lokahi.Check_State_value[c.State]),
 
 		WebhookResponseTimeNanoseconds: c.WebhookResponseTimeNanoseconds,
 	}

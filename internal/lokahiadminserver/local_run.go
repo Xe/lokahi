@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -32,6 +31,8 @@ type LocalRun struct {
 }
 
 func (l *LocalRun) Minutely() error {
+	ln.Log(context.Background(), ln.Action("minutelyCron"))
+
 	var checks []database.Check
 
 	err := l.DB.Where("every = 60").Find(&checks).Error
@@ -59,16 +60,9 @@ func (l *LocalRun) Minutely() error {
 
 	for cid, health := range result.Results {
 		var ck database.Check
-
-		for _, check := range checks {
-			if check.UUID == cid {
-				ck = check
-				break
-			}
-		}
-
-		// unknown???
-		if ck.UUID == "" {
+		err = l.DB.Where("uuid = ?", cid).First(&ck).Error
+		if err != nil {
+			logErr(err, cid, ck.WebhookURL)
 			continue
 		}
 
@@ -90,17 +84,35 @@ func (l *LocalRun) Minutely() error {
 			logErr(err, cid, ck.WebhookURL)
 			continue
 		}
+		req.Header.Add("Content-Type", "application/protobuf")
+		req.Header.Add("Accept", "application/protobuf")
 
+		st := time.Now()
+		var ed time.Time
+		var diff time.Duration
 		resp, err := l.HC.Do(req)
 		if err != nil {
 			logErr(err, cid, ck.WebhookURL)
-			return
+			goto save
+		}
+		ed = time.Now()
+		diff = ed.Sub(st)
+
+		if s := resp.StatusCode / 100; s != 2 {
+			logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
 		}
 
-		if resp.StatusCode%100 != 2 {
-			return fmt.Errorf("lokahiadminserver: %s gave HTTP status %d", ck.WebhookURL, resp.StatusCode)
+		ck.WebhookResponseTimeNanoseconds = int64(diff)
+
+	save:
+		err = l.DB.Save(&ck).Error
+		if err != nil {
+			logErr(err, cid, ck.WebhookURL)
 		}
+
 	}
+
+	return nil
 }
 
 func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_Health, database.Check) {
@@ -134,21 +146,23 @@ func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_He
 	result.Url = ck.URL
 	result.ResponseTimeNanoseconds = int64(diff)
 
-	ck.WebhookResponseTimeNanoseconds = int64(diff)
+	l.timing.RecordValue(int64(diff))
+
+	if sc := resp.StatusCode / 100; sc == 2 {
+		result.Healthy = true
+		ck.State = lokahi.Check_UP.String()
+	} else {
+		ck.State = lokahi.Check_DOWN.String()
+	}
+
+	ln.Log(ctx, ck, ln.Action("doCheckHTTPDone"), ln.F{"resp_status_code": resp.StatusCode, "resp_time": diff})
+
 	err = l.DB.Save(&ck).Error
 	if err != nil {
+		panic(err)
 		result.Error = err.Error()
 		return result, ck
 	}
-
-	l.timing.RecordValue(int64(diff))
-
-	if sc := resp.StatusCode % 100; sc == 2 {
-		log.Println(sc)
-		result.Healthy = true
-	}
-
-	ln.Log(ctx, ck, ln.F{"resp_status_code": resp.StatusCode, "resp_time": diff})
 
 	return result, ck
 

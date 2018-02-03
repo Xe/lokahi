@@ -153,3 +153,9 @@ message HistogramData {
   // nanoseconds.
   double p99_nanoseconds = 8;
 }
+
+message Nil{}
+
+service Webhook {
+	rpc Handle(CheckStatus) returns (Nil);
+}
