@@ -86,6 +86,7 @@ func (l *LocalRun) Minutely() error {
 		}
 		req.Header.Add("Content-Type", "application/protobuf")
 		req.Header.Add("Accept", "application/protobuf")
+		req.Header.Add("User-Agent", "lokahi/dev (+https://github.com/Xe/lokahi)")
 
 		st := time.Now()
 		var ed time.Time

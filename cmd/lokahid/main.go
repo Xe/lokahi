@@ -87,6 +87,14 @@ func main() {
 	mux.Handle(lokahiadmin.RunLocalPathPrefix, lokahiadmin.NewRunLocalServer(lr, makeLnHooks()))
 	mux.Handle(lokahi.ChecksPathPrefix, lokahi.NewChecksServer(cks, makeLnHooks()))
 
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		err := db.Exec("SELECT 1+1").Error
+		if err != nil {
+			ln.Error(r.Context(), err)
+			http.Error(w, "database error", http.StatusInternalServerError)
+		}
+	})
+
 	ln.Log(ctx, ln.F{"port": os.Getenv("PORT")}, ln.Action("Listening on http"))
 	ln.FatalErr(ctx, http.ListenAndServe(":"+cfg.Port, metaInfo(mux)), ln.Action("http server stopped for some reason"))
 }
