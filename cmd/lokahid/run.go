@@ -45,7 +45,7 @@ func (l *LocalRunner) doCheck(cid string) *lokahiadmin.Run_Health {
 	ed := time.Now()
 	diff := ed.Sub(st)
 
-	result.StatusCode = resp.StatusCode
+	result.StatusCode = int32(resp.StatusCode)
 	result.Url = ck.URL
 	result.ResponseTimeNanoseconds = int64(diff)
 

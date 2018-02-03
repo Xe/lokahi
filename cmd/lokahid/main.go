@@ -11,6 +11,7 @@ import (
 	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/internal/lokahiserver"
 	"github.com/Xe/lokahi/rpc/lokahi"
+	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/caarlos0/env"
 	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/heroku/x/scrub"
@@ -71,8 +72,10 @@ func main() {
 	cks := &lokahiserver.Checks{
 		DB: db,
 	}
+	lr := &LocalRunner{db: db, cli: &http.Client{}}
 	mux := http.NewServeMux()
 
+	mux.Handle(lokahiadmin.RunLocalPathPrefix, lokahiadmin.NewRunLocalServer(lr, makeLnHooks()))
 	mux.Handle(lokahi.ChecksPathPrefix, lokahi.NewChecksServer(cks, makeLnHooks()))
 
 	ln.Log(ctx, ln.F{"port": os.Getenv("PORT")}, ln.Action("Listening on http"))
