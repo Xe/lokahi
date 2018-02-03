@@ -7,10 +7,14 @@ services:
     environment:
       POSTGRES_PASSWORD: hunter2
 
-  lokahi:
+  nats:
+    image: nats:latest
+
+  lokahid:
     build: .
     restart: always
     environment:
+      NATS_URL: nats://nats:4222
       DATABASE_URL: postgres://postgres:hunter2@db:5432/postgres?sslmode=disable
       PORT: 24253
     ports:
