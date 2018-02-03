@@ -57,7 +57,7 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
-	err = db.AutoMigrate(&database.Check{})
+	err = db.AutoMigrate(&database.Check{}).Error
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}

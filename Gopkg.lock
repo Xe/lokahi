@@ -8,6 +8,12 @@
   version = "v0.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Xe/uuid"
+  packages = ["."]
+  revision = "62b230097e9c9534ca2074782b25d738c4b68964"
+
+[[projects]]
   name = "github.com/caarlos0/env"
   packages = ["."]
   revision = "7cd7992b3bc86f920394f8de92c13900da1a46b7"
@@ -99,6 +105,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b4866f06c61f356171110033b00babeb55e85e11b1ba9c84e3e36bdd0f25b57c"
+  inputs-digest = "0c0e2a111ebad29e7403bd2b56c6eacd10aa109dd85edde7548a766b192228ba"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,0 +1,17 @@
+version: '3.1'
+
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: hunter2
+
+  lokahi:
+    build: .
+    restart: always
+    environment:
+      DATABASE_URL: postgres://postgres:hunter2@db:5432/postgres?sslmode=disable
+      PORT: 24253
+    ports:
+      - 24253:24253

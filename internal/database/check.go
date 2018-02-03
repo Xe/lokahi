@@ -1,8 +1,6 @@
 package database
 
 import (
-	"time"
-
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/jinzhu/gorm"
 )
@@ -10,8 +8,6 @@ import (
 // Check is an individual HTTP check that gets scheduled every so often.
 type Check struct {
 	gorm.Model
-
-	DeletedAt time.Time
 
 	// UUID is the unique identifier of this check.
 	UUID string `gorm:"unique"`
@@ -39,9 +35,9 @@ func (c Check) AsProto() *lokahi.Check {
 		Id:          c.UUID,
 		Url:         c.URL,
 		WebhookUrl:  c.WebhookURL,
-		Every:       c.Every,
+		Every:       int32(c.Every),
 		PlaybookUrl: c.PlaybookURL,
-		State:       lokahi.Check_State_INIT,
+		State:       lokahi.Check_INIT,
 
 		WebhookResponseTimeNanoseconds: c.WebhookResponseTimeNanoseconds,
 	}

@@ -21,13 +21,13 @@ type Checks struct {
 func (c *Checks) Create(ctx context.Context, opts *lokahi.CreateOpts) (*lokahi.Check, error) {
 	dck := database.Check{
 		UUID:        uuid.New(),
-		URL:         opts.WebhoolUrl,
-		Every:       opts.Every,
-		PlaybookURL: opts.PlaybookURL,
-		State:       lokahi.Check_State_INIT,
+		URL:         opts.WebhookUrl,
+		Every:       int(opts.Every),
+		PlaybookURL: opts.PlaybookUrl,
+		State:       lokahi.Check_INIT.String(),
 	}
 
-	err := c.DB.Create(&dck)
+	err := c.DB.Create(&dck).Error
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (c *Checks) Delete(ctx context.Context, cid *lokahi.CheckID) (*lokahi.Check
 		return nil, err
 	}
 
-	err = c.DB.Where("uuid = ?", dck.UUID).Delete(database.Check{})
+	err = c.DB.Where("uuid = ?", dck.UUID).Delete(database.Check{}).Error
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (c *Checks) Get(ctx context.Context, cid *lokahi.CheckID) (*lokahi.Check, e
 // getCheck gets a check from the database
 func (c *Checks) getCheck(ctx context.Context, id string) (*database.Check, error) {
 	var ck database.Check
-	err := c.DB.Where("uuid = ?", id).First(&ck)
+	err := c.DB.Where("uuid = ?", id).First(&ck).Error
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,24 @@ func (c *Checks) List(ctx context.Context, opts *lokahi.ListOpts) (*lokahi.Check
 
 // Put updates a Check.
 func (c *Checks) Put(ctx context.Context, chk *lokahi.Check) (*lokahi.Check, error) {
-	return nil, errNotImpl
+	dck, err := c.getCheck(ctx, chk.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	dck.URL = chk.Url
+	dck.WebhookURL = chk.WebhookUrl
+	dck.WebhookResponseTimeNanoseconds = chk.WebhookResponseTimeNanoseconds
+	dck.Every = int(chk.Every)
+	dck.PlaybookURL = chk.PlaybookUrl
+	dck.State = chk.State.String()
+
+	err = c.DB.Save(dck).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return dck.AsProto(), nil
 }
 
 // Status returns the detailed histogram status of a check.
