@@ -34,7 +34,7 @@ func Build() {
 	os.Mkdir("bin", 0777)
 
 	outd := filepath.Join(wd, "bin")
-	cmds := []string{"lokahi"}
+	cmds := []string{"lokahid", "lokahictl"}
 
 	for _, c := range cmds {
 		shouldWork(ctx, nil, outd, "go", "build", "../cmd/"+c)
