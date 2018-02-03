@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/magefile/mage/mg"
 )
 
 const (
@@ -33,7 +31,6 @@ func Build() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mg.Deps(Generate)
 	os.Mkdir("bin", 0777)
 
 	outd := filepath.Join(wd, "bin")
