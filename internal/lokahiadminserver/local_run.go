@@ -126,8 +126,6 @@ func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_He
 		return result, ck
 	}
 
-	ln.Log(ctx, ck)
-
 	st := time.Now()
 	req, err := http.NewRequest("GET", ck.URL, nil)
 	if err != nil {
