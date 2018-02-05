@@ -40,7 +40,10 @@ func (l *LocalRun) Minutely() error {
 
 	var checks []database.Check
 
-	err := l.DB.Where("every = 60").Find(&checks).Error
+	tx := l.DB.Begin()
+	defer tx.Commit()
+
+	err := tx.Where("every = 60").Find(&checks).Error
 	if err != nil {
 		return err
 	}
@@ -59,9 +62,9 @@ func (l *LocalRun) Minutely() error {
 		return err
 	}
 
-	logErr := func(err error, cid, u string) {
-		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
-	}
+	var wg sync.WaitGroup
+	wg.Add(len(result.Results))
+	done := func() { wg.Done() }
 
 	for cid, health := range result.Results {
 		cst, ok := l.lastState[cid]
@@ -73,61 +76,77 @@ func (l *LocalRun) Minutely() error {
 
 		l.lastState[cid] = health.StatusCode
 
-		var ck database.Check
-		err = l.DB.Where("uuid = ?", cid).First(&ck).Error
-		if err != nil {
-			logErr(err, cid, ck.WebhookURL)
-			continue
-		}
-
-		cs := &lokahi.CheckStatus{
-			Check: ck.AsProto(),
-			LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
-		}
-
-		data, err := proto.Marshal(cs)
-		if err != nil {
-			logErr(err, cid, ck.WebhookURL)
-			continue
-		}
-
-		buf := bytes.NewBuffer(data)
-
-		req, err := http.NewRequest("POST", ck.WebhookURL, buf)
-		if err != nil {
-			logErr(err, cid, ck.WebhookURL)
-			continue
-		}
-		req.Header.Add("Content-Type", "application/protobuf")
-		req.Header.Add("Accept", "application/protobuf")
-		req.Header.Add("User-Agent", "lokahi/dev (+https://github.com/Xe/lokahi)")
-
-		st := time.Now()
-		var ed time.Time
-		var diff time.Duration
-		resp, err := l.HC.Do(req)
-		if err != nil {
-			logErr(err, cid, ck.WebhookURL)
-			goto save
-		}
-		ed = time.Now()
-		diff = ed.Sub(st)
-
-		if s := resp.StatusCode / 100; s != 2 {
-			logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
-		}
-
-		ck.WebhookResponseTimeNanoseconds = int64(diff)
-
-	save:
-		err = l.DB.Save(&ck).Error
-		if err != nil {
-			logErr(err, cid, ck.WebhookURL)
-		}
-
+		go l.sendWebhook(ctx, tx, cid, health, done)
 	}
 
+	wg.Wait()
+	ln.Log(ctx, ln.Action("done sending webhooks"))
+
 	return nil
+}
+
+func (l *LocalRun) sendWebhook(ctx context.Context, tx *gorm.DB, cid string, health *lokahiadmin.Run_Health, done func()) {
+	ln.Log(ctx, ln.F{"cid": cid}, ln.Action("sending webhook for"))
+
+	logErr := func(err error, cid, u string) {
+		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
+	}
+
+	defer done()
+	var ck database.Check
+	err := tx.Where("uuid = ?", cid).First(&ck).Error
+	if err != nil {
+		logErr(err, cid, ck.WebhookURL)
+		return
+	}
+
+	cs := &lokahi.CheckStatus{
+		Check: ck.AsProto(),
+		LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
+	}
+
+	data, err := proto.Marshal(cs)
+	if err != nil {
+		logErr(err, cid, ck.WebhookURL)
+		return
+	}
+
+	buf := bytes.NewBuffer(data)
+
+	req, err := http.NewRequest("POST", ck.WebhookURL, buf)
+	if err != nil {
+		logErr(err, cid, ck.WebhookURL)
+		return
+	}
+
+	req = req.WithContext(ctx)
+
+	req.Header.Add("Content-Type", "application/protobuf")
+	req.Header.Add("Accept", "application/protobuf")
+	req.Header.Add("User-Agent", "lokahi/dev (+https://github.com/Xe/lokahi)")
+
+	st := time.Now()
+	var ed time.Time
+	var diff time.Duration
+	resp, err := l.HC.Do(req)
+	if err != nil {
+		logErr(err, cid, ck.WebhookURL)
+		goto save
+	}
+	ed = time.Now()
+	diff = ed.Sub(st)
+
+	if s := resp.StatusCode / 100; s != 2 {
+		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
+	}
+
+	ck.WebhookResponseTimeNanoseconds = int64(diff)
+
+save:
+	err = tx.Save(&ck).Error
+	if err != nil {
+		logErr(err, cid, ck.WebhookURL)
+	}
 }
 
 func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_Health, database.Check) {
