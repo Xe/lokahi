@@ -19,6 +19,10 @@ type Checks interface {
 	Put(ctx context.Context, c Check) (*Check, error)
 }
 
+func ChecksPostgres(db *sqlx.DB) Checks {
+	return &checksPostgres{db: db}
+}
+
 type checksPostgres struct {
 	db *sqlx.DB
 }

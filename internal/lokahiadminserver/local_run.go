@@ -16,7 +16,6 @@ import (
 	"github.com/Xe/uuid"
 	"github.com/codahale/hdrhistogram"
 	"github.com/gogo/protobuf/proto"
-	"github.com/jinzhu/gorm"
 )
 
 type Runner interface {
@@ -25,25 +24,24 @@ type Runner interface {
 
 type LocalRun struct {
 	HC *http.Client
-	DB *gorm.DB
+
+	Cs  database.Checks
+	Rs  database.Runs
+	Ris database.RunInfos
 
 	lastState map[string]int32
 	timing    *hdrhistogram.Histogram
 }
 
 func (l *LocalRun) Minutely() error {
-	ln.Log(context.Background(), ln.Action("minutelyCron"))
+	ctx := context.Background()
+	ctx = ln.WithF(ctx, ln.F{"at": "localRun Minutely cron"})
 
 	if l.lastState == nil {
 		l.lastState = map[string]int32{}
 	}
 
-	var checks []database.Check
-
-	tx := l.DB.Begin()
-	defer tx.Commit()
-
-	err := tx.Where("every = 60").Find(&checks).Error
+	checks, err := l.Cs.ListByEveryValue(ctx, 60)
 	if err != nil {
 		return err
 	}
@@ -54,7 +52,7 @@ func (l *LocalRun) Minutely() error {
 		cids.Ids = append(cids.Ids, ck.UUID)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 40*time.Second)
 	defer cancel()
 
 	result, err := l.Run(ctx, cids)
@@ -76,7 +74,7 @@ func (l *LocalRun) Minutely() error {
 
 		l.lastState[cid] = health.StatusCode
 
-		go l.sendWebhook(ctx, tx, cid, health, done)
+		go l.sendWebhook(ctx, cid, health, done)
 	}
 
 	wg.Wait()
@@ -85,7 +83,7 @@ func (l *LocalRun) Minutely() error {
 	return nil
 }
 
-func (l *LocalRun) sendWebhook(ctx context.Context, tx *gorm.DB, cid string, health *lokahiadmin.Run_Health, done func()) {
+func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiadmin.Run_Health, done func()) {
 	ln.Log(ctx, ln.F{"cid": cid}, ln.Action("sending webhook for"))
 
 	logErr := func(err error, cid, u string) {
@@ -93,8 +91,8 @@ func (l *LocalRun) sendWebhook(ctx context.Context, tx *gorm.DB, cid string, hea
 	}
 
 	defer done()
-	var ck database.Check
-	err := tx.Where("uuid = ?", cid).First(&ck).Error
+
+	ck, err := l.Cs.Get(ctx, cid)
 	if err != nil {
 		logErr(err, cid, ck.WebhookURL)
 		return
@@ -143,33 +141,32 @@ func (l *LocalRun) sendWebhook(ctx context.Context, tx *gorm.DB, cid string, hea
 	ck.WebhookResponseTimeNanoseconds = int64(diff)
 
 save:
-	err = tx.Save(&ck).Error
+	_, err = l.Cs.Put(ctx, *ck)
 	if err != nil {
 		logErr(err, cid, ck.WebhookURL)
 	}
 }
 
-func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_Health, database.Check) {
+func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.Run_Health, database.Check) {
 	result := &lokahiadmin.Run_Health{}
 
-	var ck database.Check
-	err := l.DB.Where("uuid = ?", cid).First(&ck).Error
+	ck, err := l.Cs.Get(ctx, cid)
 	if err != nil {
 		result.Error = err.Error()
-		return result, ck
+		return result, *ck
 	}
 
 	st := time.Now()
 	req, err := http.NewRequest("GET", ck.URL, nil)
 	if err != nil {
 		result.Error = err.Error()
-		return result, ck
+		return result, *ck
 	}
 
 	resp, err := l.HC.Do(req)
 	if err != nil {
 		result.Error = err.Error()
-		return result, ck
+		return result, *ck
 	}
 	ed := time.Now()
 	diff := ed.Sub(st)
@@ -189,14 +186,24 @@ func (l *LocalRun) doCheck(ctx context.Context, cid string) (*lokahiadmin.Run_He
 
 	ln.Log(ctx, ck, ln.Action("doCheckHTTPDone"), ln.F{"resp_status_code": resp.StatusCode, "resp_time": diff})
 
-	err = l.DB.Save(&ck).Error
+	ck, err = l.Cs.Put(ctx, *ck)
 	if err != nil {
-		panic(err)
 		result.Error = err.Error()
-		return result, ck
+		return result, *ck
 	}
 
-	return result, ck
+	err = l.Ris.Put(ctx, database.RunInfo{
+		UUID:                    uuid.New(),
+		RunID:                   rid,
+		CheckID:                 cid,
+		ResponseStatus:          resp.StatusCode,
+		ResponseTimeNanoseconds: int64(diff),
+	})
+	if err != nil {
+		result.Error = err.Error()
+	}
+
+	return result, *ck
 
 }
 
@@ -205,10 +212,11 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 		l.timing = hdrhistogram.New(0, 300000000000, 1)
 	}
 
+	rid := uuid.New()
+
 	result := &lokahiadmin.Run{
 		Results: map[string]*lokahiadmin.Run_Health{},
 		Cids:    cids,
-		Id:      uuid.New(),
 	}
 	defer func() { result.Finished = true }()
 	st := time.Now()
@@ -219,7 +227,7 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	var cks []database.Check
 	for _, cid := range cids.Ids {
 		go func(cid string) {
-			res, ck := l.doCheck(ctx, cid)
+			res, ck := l.doCheck(ctx, rid, cid)
 
 			if res.Error != "" {
 				panic(cid + ":" + res.Error)
@@ -245,10 +253,11 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	}
 
 	dbr := database.Run{
+		UUID:    rid,
 		Message: string(data),
 	}
 
-	err = l.DB.Save(&dbr).Error
+	_, err = l.Rs.Put(ctx, dbr)
 	if err != nil {
 		return nil, err
 	}

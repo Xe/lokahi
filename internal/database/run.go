@@ -21,6 +21,10 @@ type Run struct {
 	Message   string    `db:"message"`
 }
 
+func RunsPostgres(db *sqlx.DB) Runs {
+	return &runsPostgres{db: db}
+}
+
 type runsPostgres struct {
 	db *sqlx.DB
 }
@@ -69,8 +73,13 @@ type RunInfo struct {
 	CreatedAt                      time.Time `db:"created_at"`
 	RunID                          string    `db:"run_id"`
 	CheckID                        string    `db:"check_id"`
+	ResponseStatus                 int       `db:"response_status"`
 	ResponseTimeNanoseconds        int64     `db:"response_time_nanoseconds"`
 	WebhookResponseTimeNanoseconds int64     `db:"webhook_response_time_nanoseconds"`
+}
+
+func RunInfosPostgres(db *sqlx.DB) RunInfos {
+	return &runInfoPostgres{db: db}
 }
 
 type runInfoPostgres struct {
@@ -88,6 +97,6 @@ func (r *runInfoPostgres) GetRun(ctx context.Context, rid string) ([]RunInfo, er
 }
 
 func (r *runInfoPostgres) Put(ctx context.Context, ri RunInfo) error {
-	_, err := r.db.NamedExecContext(ctx, `INSERT INTO run_info(run_id, check_id, response_time_nanoseconds, webhook_response_time_nanoseconds) VALUES(:run_id, :check_id, :response_time_nanoseconds, :webhook_response_time_nanoseconds)`, ri)
+	_, err := r.db.NamedExecContext(ctx, `INSERT INTO run_info(uuid, run_id, check_id, response_status, response_time_nanoseconds, webhook_response_time_nanoseconds) VALUES(:uuid, :run_id, :check_id, :response_status, :response_time_nanoseconds, :webhook_response_time_nanoseconds)`, ri)
 	return err
 }
