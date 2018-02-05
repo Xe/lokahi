@@ -21,7 +21,7 @@ func TestRuns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer destroy(durl)
+	defer Destroy(durl)
 
 	rns := runsPostgres{db: db}
 
@@ -54,7 +54,7 @@ func TestRunInfos(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer destroy(durl)
+	defer Destroy(durl)
 
 	ris := runInfoPostgres{db: db}
 

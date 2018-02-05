@@ -31,7 +31,7 @@ func Migrate(durl string) error {
 	return nil
 }
 
-func destroy(durl string) error {
+func Destroy(durl string) error {
 	s := bindata.Resource(dmigrations.AssetNames(),
 		func(name string) ([]byte, error) {
 			return dmigrations.Asset(name)

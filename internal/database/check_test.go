@@ -22,7 +22,7 @@ func TestChecks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer destroy(durl)
+	defer Destroy(durl)
 
 	cp := &checksPostgres{db: db}
 
