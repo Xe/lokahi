@@ -22,6 +22,7 @@ func Generate() {
 	shouldWork(ctx, nil, wd, "statik", "-src", "./public", "-f")
 	shouldWork(ctx, nil, filepath.Join(wd, "rpc", "lokahi"), "sh", "./regen.sh")
 	shouldWork(ctx, nil, filepath.Join(wd, "rpc", "lokahiadmin"), "sh", "./regen.sh")
+	shouldWork(ctx, nil, filepath.Join(wd, "internal", "database", "migrations"), "go-bindata", "-pkg=dmigrations", "-o=../dmigrations/bindata.go")
 
 	fmt.Println("reran code generation")
 }
@@ -34,7 +35,7 @@ func Build() {
 	os.Mkdir("bin", 0777)
 
 	outd := filepath.Join(wd, "bin")
-	cmds := []string{"lokahid", "lokahictl", "sample_hook", "duke-of-york"}
+	cmds := []string{"lokahid", "lokahictl", "sample_hook", "duke-of-york", "runmigrations"}
 
 	for _, c := range cmds {
 		shouldWork(ctx, nil, outd, "go", "build", "../cmd/"+c)

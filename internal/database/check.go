@@ -1,10 +1,27 @@
 package database
 
 import (
+	"context"
+	"database/sql"
+
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/jinzhu/gorm"
 )
+
+// Checks is the set of calls that can be made to the database regarding checks
+type Checks interface {
+	Create(ctx context.Context, c Check) (*Check, error)
+	Delete(ctx context.Context, cid string) (*Check, error)
+	Get(ctx context.Context, cid string) (*Check, error)
+	ListByEveryValue(ctx context.Context, time int)
+	List(ctx context.Context, count, page int) ([]Check, error)
+	Put(ctx context.Context, c Check) (*Check, error)
+}
+
+type checksPostgres struct {
+	db *sql.DB
+}
 
 // Check is an individual HTTP check that gets scheduled every so often.
 type Check struct {
@@ -29,6 +46,7 @@ type Check struct {
 	State string
 }
 
+// F ields for logging.
 func (c Check) F() ln.F {
 	return ln.F{
 		"check_id":    c.ID,
