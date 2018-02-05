@@ -14,8 +14,8 @@ type Checks interface {
 	Create(ctx context.Context, c Check) (*Check, error)
 	Delete(ctx context.Context, cid string) (*Check, error)
 	Get(ctx context.Context, cid string) (*Check, error)
-	ListByEveryValue(ctx context.Context, time int)
-	List(ctx context.Context, count, page int) ([]Check, error)
+	ListByEveryValue(ctx context.Context, time int) ([]Check, error)
+	List(ctx context.Context, count, offset int) ([]Check, error)
 	Put(ctx context.Context, c Check) (*Check, error)
 }
 
@@ -36,6 +36,63 @@ func (c *checksPostgres) Create(ctx context.Context, ch Check) (*Check, error) {
 	}
 
 	return &result, nil
+}
+
+func (c *checksPostgres) Get(ctx context.Context, cid string) (*Check, error) {
+	var result Check
+	err := c.db.Get(&result, "SELECT * FROM checks WHERE uuid = $1", cid)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (c *checksPostgres) Delete(ctx context.Context, cid string) (*Check, error) {
+	result, err := c.Get(ctx, cid)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.db.Exec(`DELETE FROM checks WHERE uuid = $1`, cid)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (c *checksPostgres) List(ctx context.Context, count, offset int) ([]Check, error) {
+	var result []Check
+
+	err := c.db.Select(&result, `SELECT * FROM checks LIMIT $1 OFFSET $2`, count, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (c *checksPostgres) Put(ctx context.Context, ch Check) (*Check, error) {
+	ch.EditedAt = time.Now()
+
+	_, err := c.db.NamedExec(`UPDATE checks SET edited_at = :edited_at, url = :url, webhook_url = :webhook_url, webhook_response_time_nanoseconds = :webhook_response_time_nanoseconds, every = :every, playbook_url = :playbook_url, state = :state WHERE uuid = :uuid`, ch)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Get(ctx, ch.UUID)
+}
+
+func (c *checksPostgres) ListByEveryValue(ctx context.Context, every int) ([]Check, error) {
+	var result []Check
+
+	err := c.db.Select(&result, `SELECT * FROM CHECKS WHERE every = $1`, every)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // Check is an individual HTTP check that gets scheduled every so often.
