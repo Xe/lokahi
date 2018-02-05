@@ -14,10 +14,9 @@ import (
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/caarlos0/env"
-	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/heroku/x/scrub"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/robfig/cron"
 )
 
@@ -57,16 +56,12 @@ func main() {
 
 	ctx = ln.WithF(ctx, cfg.F())
 
-	db, err := gorm.Open("postgres", cfg.DatabaseURL)
+	err = database.Migrate(cfg.DatabaseURL)
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}
 
-	err = db.AutoMigrate(database.Check{}).Error
-	if err != nil {
-		ln.FatalErr(ctx, err)
-	}
-	err = db.AutoMigrate(database.Run{}).Error
+	db, err := sqlx.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}

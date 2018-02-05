@@ -245,9 +245,7 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	}
 
 	dbr := database.Run{
-		Finished: true,
-		Message:  string(data),
-		Checks:   cks,
+		Message: string(data),
 	}
 
 	err = l.DB.Save(&dbr).Error

@@ -44,11 +44,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/heroku/x"
-  packages = [
-    "hmetrics",
-    "hmetrics/onload",
-    "scrub"
-  ]
+  packages = ["scrub"]
   revision = "705849e307dd75c91728463dea5bfd08ef493e64"
 
 [[projects]]
@@ -71,6 +67,15 @@
   name = "github.com/jinzhu/inflection"
   packages = ["."]
   revision = "1c35d901db3da928c72a72d8458480cc9ade058f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jmoiron/sqlx"
+  packages = [
+    ".",
+    "reflectx"
+  ]
+  revision = "05cef0741ade10ca668982355b3f3f0bcf0ff0a8"
 
 [[projects]]
   branch = "master"
@@ -153,6 +158,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f23180e5d51dfe74c6daab88f39d69ae507eced6dc2298bebf4beff0d23f7fa1"
+  inputs-digest = "162cc0d30029413ec94856ca6fb251318c9fadeb1e015089b0771dc1680e8625"
   solver-name = "gps-cdcl"
   solver-version = 1
