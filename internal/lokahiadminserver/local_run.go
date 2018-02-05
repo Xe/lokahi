@@ -3,7 +3,6 @@ package lokahiadminserver
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"github.com/Xe/uuid"
 	"github.com/codahale/hdrhistogram"
 	"github.com/gogo/protobuf/proto"
+	"google.golang.org/api/support/bundler"
 )
 
 type Runner interface {
@@ -29,6 +29,9 @@ type LocalRun struct {
 	Rs  database.Runs
 	Ris database.RunInfos
 
+	ribdl *bundler.Bundler
+	ckbdl *bundler.Bundler
+
 	lastState map[string]int32
 	timing    *hdrhistogram.Histogram
 }
@@ -36,6 +39,48 @@ type LocalRun struct {
 func (l *LocalRun) Minutely() error {
 	ctx := context.Background()
 	ctx = ln.WithF(ctx, ln.F{"at": "localRun Minutely cron"})
+
+	if l.ribdl == nil {
+		l.ribdl = bundler.NewBundler(database.RunInfo{}, func(i interface{}) {
+			data, ok := i.([]database.RunInfo)
+			if !ok {
+				return
+			}
+
+			for _, d := range data {
+				err := l.Ris.Put(context.Background(), d)
+				if err != nil {
+					ln.Error(context.Background(), err, ln.Action("putting deferred runinfo"), ln.F{"run_id": d.RunID, "check_id": d.CheckID})
+				}
+			}
+
+			ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
+		})
+		l.ribdl.BundleCountThreshold = 300
+		l.ribdl.DelayThreshold = 5 * time.Second
+		l.ribdl.BundleByteThreshold = 1024 * 1024 * 1024
+	}
+
+	if l.ckbdl == nil {
+		l.ckbdl = bundler.NewBundler(database.Check{}, func(i interface{}) {
+			data, ok := i.([]database.Check)
+			if !ok {
+				return
+			}
+
+			for _, d := range data {
+				_, err := l.Cs.Put(context.Background(), d)
+				if err != nil {
+					ln.Error(context.Background(), err, ln.Action("putting deferred check"), ln.F{"check_id": d.UUID})
+				}
+			}
+
+			ln.Log(context.Background(), ln.Action("put deferred check"), ln.F{"count": len(data)})
+		})
+		l.ckbdl.BundleCountThreshold = 300
+		l.ckbdl.DelayThreshold = time.Second
+		l.ckbdl.BundleByteThreshold = 1024 * 1024 * 1024
+	}
 
 	if l.lastState == nil {
 		l.lastState = map[string]int32{}
@@ -60,25 +105,30 @@ func (l *LocalRun) Minutely() error {
 		return err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(result.Results))
-	done := func() { wg.Done() }
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
 
-	for cid, health := range result.Results {
-		cst, ok := l.lastState[cid]
-		if ok {
-			if cst == health.StatusCode {
-				continue
+		var wg sync.WaitGroup
+		wg.Add(len(result.Results))
+		done := func() { wg.Done() }
+
+		for cid, health := range result.Results {
+			cst, ok := l.lastState[cid]
+			if ok {
+				if cst == health.StatusCode {
+					continue
+				}
 			}
+
+			l.lastState[cid] = health.StatusCode
+
+			go l.sendWebhook(ctx, cid, health, done)
 		}
 
-		l.lastState[cid] = health.StatusCode
-
-		go l.sendWebhook(ctx, cid, health, done)
-	}
-
-	wg.Wait()
-	ln.Log(ctx, ln.Action("done sending webhooks"))
+		wg.Wait()
+		ln.Log(ctx, ln.Action("done sending webhooks"))
+	}()
 
 	return nil
 }
@@ -94,6 +144,11 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 
 	ck, err := l.Cs.Get(ctx, cid)
 	if err != nil {
+		if ck == nil {
+			logErr(err, cid, "")
+			return
+		}
+
 		logErr(err, cid, ck.WebhookURL)
 		return
 	}
@@ -137,14 +192,6 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 	if s := resp.StatusCode / 100; s != 2 {
 		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
 	}
-
-	ck.WebhookResponseTimeNanoseconds = int64(diff)
-
-save:
-	_, err = l.Cs.Put(ctx, *ck)
-	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
-	}
 }
 
 func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.Run_Health, database.Check) {
@@ -153,7 +200,7 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.R
 	ck, err := l.Cs.Get(ctx, cid)
 	if err != nil {
 		result.Error = err.Error()
-		return result, *ck
+		return result, database.Check{}
 	}
 
 	st := time.Now()
@@ -192,13 +239,13 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.R
 		return result, *ck
 	}
 
-	err = l.Ris.Put(ctx, database.RunInfo{
+	err = l.ribdl.Add(database.RunInfo{
 		UUID:                    uuid.New(),
 		RunID:                   rid,
 		CheckID:                 cid,
 		ResponseStatus:          resp.StatusCode,
 		ResponseTimeNanoseconds: int64(diff),
-	})
+	}, 50)
 	if err != nil {
 		result.Error = err.Error()
 	}
@@ -222,22 +269,16 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	st := time.Now()
 	defer func() { result.StartTimeUnix = st.Unix() }()
 
-	lock := sync.Mutex{}
-
 	var cks []database.Check
 	for _, cid := range cids.Ids {
-		go func(cid string) {
-			res, ck := l.doCheck(ctx, rid, cid)
+		res, ck := l.doCheck(ctx, rid, cid)
 
-			if res.Error != "" {
-				panic(cid + ":" + res.Error)
-			}
+		if res.Error != "" {
+			panic(cid + ":" + res.Error)
+		}
 
-			lock.Lock()
-			result.Results[cid] = res
-			cks = append(cks, ck)
-			lock.Unlock()
-		}(cid)
+		result.Results[cid] = res
+		cks = append(cks, ck)
 	}
 
 	for len(cks) != len(cids.Ids) {
@@ -247,17 +288,12 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	ela := time.Now().Sub(st)
 	result.ElapsedNanoseconds = int64(ela)
 
-	data, err := json.Marshal(result)
-	if err != nil {
-		return nil, err
-	}
-
 	dbr := database.Run{
 		UUID:    rid,
-		Message: string(data),
+		Message: fmt.Sprintf("%d checks run in %v", len(result.Results), ela),
 	}
 
-	_, err = l.Rs.Put(ctx, dbr)
+	_, err := l.Rs.Put(ctx, dbr)
 	if err != nil {
 		return nil, err
 	}

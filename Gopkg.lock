@@ -139,9 +139,21 @@
   ]
   revision = "2fb46b16b8dda405028c50f7c7f0f9dd1fa6bfb1"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["semaphore"]
+  revision = "fd80eb99c8f653c847d294a001bdf2a3a6f768f5"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/api"
+  packages = ["support/bundler"]
+  revision = "778ecc7e1a521e75638be98345220b14a1856f5f"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5339a6d14706c03e79885b46d5042abf4390d265ee746a32ccd1502b85a42146"
+  inputs-digest = "abba55af5d156eea358948a9c92d6cdc0fb64823fb5842598dc85548b93127af"
   solver-name = "gps-cdcl"
   solver-version = 1
