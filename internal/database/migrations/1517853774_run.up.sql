@@ -1,9 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS runs
- ( id         UUID      PRIMARY KEY DEFAULT uuid_generate_v1mc()
+ ( id         SERIAL
+ , uuid       UUID      PRIMARY KEY DEFAULT uuid_generate_v1mc()
  , created_at TIMESTAMP NOT NULL DEFAULT NOW()
- , check_ids  TEXT[]    NOT NULL
  , message    TEXT      NOT NULL DEFAULT ''
  );
 
