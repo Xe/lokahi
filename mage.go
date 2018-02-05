@@ -34,7 +34,7 @@ func Build() {
 	os.Mkdir("bin", 0777)
 
 	outd := filepath.Join(wd, "bin")
-	cmds := []string{"lokahid", "lokahictl", "sample_hook"}
+	cmds := []string{"lokahid", "lokahictl", "sample_hook", "duke-of-york"}
 
 	for _, c := range cmds {
 		shouldWork(ctx, nil, outd, "go", "build", "../cmd/"+c)
@@ -56,6 +56,6 @@ func Docker() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	shouldWork(ctx, nil, wd, "docker", "pull", "xena/go-mini:"+goVersion)
+	shouldWork(ctx, nil, wd, "docker", "pull", "xena/go:"+goVersion)
 	shouldWork(ctx, nil, wd, "docker", "build", "-t", "xena/lokahi", ".")
 }
