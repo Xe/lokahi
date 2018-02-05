@@ -41,3 +41,39 @@ func TestRuns(t *testing.T) {
 		t.Fatal("message not intact")
 	}
 }
+
+func TestRunInfos(t *testing.T) {
+	ctx := context.Background()
+	durl := os.Getenv("DATABASE_URL")
+	db, err := sqlx.Open("postgres", durl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = Migrate(durl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer destroy(durl)
+
+	ris := runInfoPostgres{db: db}
+
+	err = ris.Put(ctx, RunInfo{
+		RunID:                          "in the 90's",
+		CheckID:                        "loslovakia",
+		ResponseTimeNanoseconds:        42069,
+		WebhookResponseTimeNanoseconds: 9001,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	riset, err := ris.GetRun(ctx, "in the 90's")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(riset) == 0 {
+		t.Fatal("expected riset to have len != 0")
+	}
+}
