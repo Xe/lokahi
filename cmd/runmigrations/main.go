@@ -18,5 +18,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Fatal(database.Migrate(cfg.DBURL))
+	err = database.Migrate(cfg.DBURL)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

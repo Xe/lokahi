@@ -30,3 +30,27 @@ func Migrate(durl string) error {
 
 	return nil
 }
+
+func destroy(durl string) error {
+	s := bindata.Resource(dmigrations.AssetNames(),
+		func(name string) ([]byte, error) {
+			return dmigrations.Asset(name)
+		})
+
+	d, err := bindata.WithInstance(s)
+	if err != nil {
+		return err
+	}
+
+	m, err := migrate.NewWithSourceInstance("go-bindata", d, durl)
+	if err != nil {
+		return err
+	}
+
+	err = m.Down()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

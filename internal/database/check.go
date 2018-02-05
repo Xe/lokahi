@@ -2,11 +2,11 @@ package database
 
 import (
 	"context"
-	"database/sql"
+	"time"
 
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/rpc/lokahi"
-	"github.com/jinzhu/gorm"
+	"github.com/jmoiron/sqlx"
 )
 
 // Checks is the set of calls that can be made to the database regarding checks
@@ -20,36 +20,52 @@ type Checks interface {
 }
 
 type checksPostgres struct {
-	db *sql.DB
+	db *sqlx.DB
+}
+
+func (c *checksPostgres) Create(ctx context.Context, ch Check) (*Check, error) {
+	_, err := c.db.NamedExec(`INSERT INTO checks(url, webhook_url, playbook_url, every) VALUES (:url, :webhook_url, :playbook_url, :every)`, ch)
+	if err != nil {
+		return nil, err
+	}
+
+	var result Check
+	err = c.db.Get(&result, "SELECT * FROM checks WHERE url = $1", ch.URL)
+	if err != nil { // unlikely
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 // Check is an individual HTTP check that gets scheduled every so often.
 type Check struct {
-	gorm.Model
+	ID   int    `db:"id"`
+	UUID string `db:"uuid"`
 
-	// UUID is the unique identifier of this check.
-	UUID string `gorm:"unique"`
+	CreatedAt time.Time `db:"created_at"`
+	EditedAt  time.Time `db:"edited_at"`
+
 	// URL is the URL that this check will monitor.
-	URL string `gorm:"unique"`
+	URL string `db:"url"`
 	// WebhookURL is the URL that state changes will be POSTed to.
-	WebhookURL string
+	WebhookURL string `db:"webhook_url"`
 	// WebhookResponseTimeNanoseconds is the last response time of the
 	// webhook URL in nanoseconds.
-	WebhookResponseTimeNanoseconds int64
+	WebhookResponseTimeNanoseconds int64 `db:"webhook_response_time_nanoseconds"`
 	// Every is how often this check will run in seconds.
 	// (minimum: 60, maximum: 600)
-	Every int
+	Every int `db:"every"`
 	// PlaybookURL is a URL for operations staff to respond to downtime of
 	// the service that is backed by the URL above.
-	PlaybookURL string
+	PlaybookURL string `db:"playbook_url"`
 	// State is the check's last known state.
-	State string
+	State string `db:"state"`
 }
 
 // F ields for logging.
 func (c Check) F() ln.F {
 	return ln.F{
-		"check_id":    c.ID,
 		"check_uuid":  c.UUID,
 		"check_url":   c.URL,
 		"check_every": c.Every,
