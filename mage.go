@@ -56,6 +56,22 @@ func Docker() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	shouldWork(ctx, nil, wd, "docker", "pull", "xena/alpine")
 	shouldWork(ctx, nil, wd, "docker", "pull", "xena/go:"+goVersion)
 	shouldWork(ctx, nil, wd, "docker", "build", "-t", "xena/lokahi", ".")
+}
+
+// Run starts an instance of lokahid with default configuration and no
+// authentication for debugging.
+func Run() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	fmt.Println("building docker images")
+	Docker()
+
+	fmt.Println("Starting docker compose")
+
+	defer shouldWork(ctx, nil, wd, "docker-compose", "down")
+	shouldWork(ctx, nil, wd, "docker-compose", "up")
 }

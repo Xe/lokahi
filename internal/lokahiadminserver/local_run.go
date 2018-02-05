@@ -27,11 +27,16 @@ type LocalRun struct {
 	HC *http.Client
 	DB *gorm.DB
 
-	timing *hdrhistogram.Histogram
+	lastState map[string]int32
+	timing    *hdrhistogram.Histogram
 }
 
 func (l *LocalRun) Minutely() error {
 	ln.Log(context.Background(), ln.Action("minutelyCron"))
+
+	if l.lastState == nil {
+		l.lastState = map[string]int32{}
+	}
 
 	var checks []database.Check
 
@@ -59,6 +64,15 @@ func (l *LocalRun) Minutely() error {
 	}
 
 	for cid, health := range result.Results {
+		cst, ok := l.lastState[cid]
+		if ok {
+			if cst == health.StatusCode {
+				continue
+			}
+		}
+
+		l.lastState[cid] = health.StatusCode
+
 		var ck database.Check
 		err = l.DB.Where("uuid = ?", cid).First(&ck).Error
 		if err != nil {

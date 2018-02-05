@@ -7,8 +7,17 @@ services:
     environment:
       POSTGRES_PASSWORD: hunter2
 
+  duke:
+    image: xena/lokahi
+    restart: always
+    depends_on:
+      - "samplehook"
+    environment:
+      PORT: 9001
+    command: duke-of-york
+
   samplehook:
-    build: .
+    image: xena/lokahi
     restart: always
     depends_on:
       - "lokahid"
@@ -17,14 +26,12 @@ services:
     command: sample_hook
 
   lokahid:
-    build: .
+    image: xena/lokahi
     restart: always
     depends_on:
       - "db"
     environment:
-      NATS_URL: nats://nats:4222
       DATABASE_URL: postgres://postgres:hunter2@db:5432/postgres?sslmode=disable
       PORT: 24253
-      LN_DEBUG: 1
     ports:
       - 24253:24253

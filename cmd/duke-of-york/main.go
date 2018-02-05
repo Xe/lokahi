@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -33,6 +34,9 @@ func main() {
 			case <-t.C:
 				shouldLock.Lock()
 				should500 = !should500
+
+				log.Printf("will return 500: %v", should500)
+
 				shouldLock.Unlock()
 			}
 		}
