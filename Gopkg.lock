@@ -44,11 +44,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/heroku/x"
-  packages = [
-    "hmetrics",
-    "hmetrics/onload",
-    "scrub"
-  ]
+  packages = ["scrub"]
   revision = "705849e307dd75c91728463dea5bfd08ef493e64"
 
 [[projects]]
@@ -58,19 +54,13 @@
   version = "v1.0"
 
 [[projects]]
-  name = "github.com/jinzhu/gorm"
+  branch = "master"
+  name = "github.com/jmoiron/sqlx"
   packages = [
     ".",
-    "dialects/postgres"
+    "reflectx"
   ]
-  revision = "5174cc5c242a728b435ea2be8a2f7f998e15429b"
-  version = "v1.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/jinzhu/inflection"
-  packages = ["."]
-  revision = "1c35d901db3da928c72a72d8458480cc9ade058f"
+  revision = "05cef0741ade10ca668982355b3f3f0bcf0ff0a8"
 
 [[projects]]
   branch = "master"
@@ -83,10 +73,21 @@
   name = "github.com/lib/pq"
   packages = [
     ".",
-    "hstore",
     "oid"
   ]
   revision = "88edab0803230a3898347e77b474f8c1820a1f20"
+
+[[projects]]
+  name = "github.com/mattes/migrate"
+  packages = [
+    ".",
+    "database",
+    "database/postgres",
+    "source",
+    "source/go-bindata"
+  ]
+  revision = "035c07716cd373d88456ec4d701402df52584cb4"
+  version = "v3.0.1"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -141,6 +142,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d286699b62844f26322261a8f98d807616920e69c473815bc4f69b4eb9a5a3bf"
+  inputs-digest = "5339a6d14706c03e79885b46d5042abf4390d265ee746a32ccd1502b85a42146"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -99,8 +99,8 @@ message ListOpts {
   // count is the number of checks that will be returned.
   int32 count = 1;
 
-  // page is the page of results to fetch.
-  int32 page = 2;
+  // offset is the number of checks that will be offset
+  int32 offset = 2;
 
   // include_status includes the histogram data for each check result.
   // This is O(scary). Use this with care.

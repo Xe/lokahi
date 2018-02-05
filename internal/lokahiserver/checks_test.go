@@ -2,27 +2,29 @@ package lokahiserver
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/rpc/lokahi"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 func TestChecks(t *testing.T) {
-	db, err := gorm.Open("postgres", "postgres://postgres:hunter2@127.0.0.1:5432/postgres?sslmode=disable")
+	durl := os.Getenv("DATABASE_URL")
+	db, err := sqlx.Open("postgres", durl)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = db.AutoMigrate(&database.Check{}).Error
+	err = database.Migrate(durl)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Exec("DROP TABLE checks")
+	defer database.Destroy(durl)
 
-	c := &Checks{DB: db}
+	c := &Checks{DB: database.ChecksPostgres(db)}
 	ctx := context.Background()
 
 	chk, err := c.Create(ctx, &lokahi.CreateOpts{

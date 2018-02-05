@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/internal/database"
@@ -14,10 +15,9 @@ import (
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/caarlos0/env"
-	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/heroku/x/scrub"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/robfig/cron"
 )
 
@@ -57,23 +57,26 @@ func main() {
 
 	ctx = ln.WithF(ctx, cfg.F())
 
-	db, err := gorm.Open("postgres", cfg.DatabaseURL)
-	if err != nil {
+	err = database.Migrate(cfg.DatabaseURL)
+	if err != nil && err.Error() != "no change" {
 		ln.FatalErr(ctx, err)
 	}
 
-	err = db.AutoMigrate(database.Check{}).Error
-	if err != nil {
-		ln.FatalErr(ctx, err)
-	}
-	err = db.AutoMigrate(database.Run{}).Error
+	// wait for postgres
+	time.Sleep(2 * time.Second)
+	db, err := sqlx.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		ln.FatalErr(ctx, err)
 	}
 
 	cr := cron.New()
-	cks := &lokahiserver.Checks{DB: db}
-	lr := &lokahiadminserver.LocalRun{HC: &http.Client{}, DB: db}
+	cks := &lokahiserver.Checks{DB: database.ChecksPostgres(db)}
+	lr := &lokahiadminserver.LocalRun{
+		HC:  &http.Client{},
+		Cs:  database.ChecksPostgres(db),
+		Rs:  database.RunsPostgres(db),
+		Ris: database.RunInfosPostgres(db),
+	}
 	mux := http.NewServeMux()
 
 	cr.AddFunc("@every 1m", func() {
@@ -88,7 +91,7 @@ func main() {
 	mux.Handle(lokahi.ChecksPathPrefix, lokahi.NewChecksServer(cks, makeLnHooks()))
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		err := db.Exec("SELECT 1+1").Error
+		_, err := db.Exec("SELECT 1+1")
 		if err != nil {
 			ln.Error(r.Context(), err)
 			http.Error(w, "database error", http.StatusInternalServerError)

@@ -6,21 +6,18 @@ import (
 
 	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/rpc/lokahi"
-	"github.com/Xe/uuid"
-	"github.com/jinzhu/gorm"
 )
 
 var errNotImpl = errors.New("not implemented")
 
 // Checks implements service Checks.
 type Checks struct {
-	DB *gorm.DB
+	DB database.Checks
 }
 
 // Create creates a new health check with the given options.
 func (c *Checks) Create(ctx context.Context, opts *lokahi.CreateOpts) (*lokahi.Check, error) {
 	dck := database.Check{
-		UUID:        uuid.New(),
 		URL:         opts.Url,
 		WebhookURL:  opts.WebhookUrl,
 		Every:       int(opts.Every),
@@ -28,32 +25,32 @@ func (c *Checks) Create(ctx context.Context, opts *lokahi.CreateOpts) (*lokahi.C
 		State:       lokahi.Check_INIT.String(),
 	}
 
-	err := c.DB.Create(&dck).Error
+	result, err := c.DB.Create(ctx, dck)
 	if err != nil {
 		return nil, err
 	}
 
-	return dck.AsProto(), nil
+	return result.AsProto(), nil
 }
 
 // Delete removes a check by ID and returns the data that was deleted.
 func (c *Checks) Delete(ctx context.Context, cid *lokahi.CheckID) (*lokahi.Check, error) {
-	dck, err := c.getCheck(ctx, cid.Id)
+	_, err := c.DB.Get(ctx, cid.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	err = c.DB.Unscoped().Where("uuid = ?", dck.UUID).Delete(database.Check{}).Error
+	result, err := c.DB.Delete(ctx, cid.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	return dck.AsProto(), nil
+	return result.AsProto(), nil
 }
 
 // Get returns information on a check by ID.
 func (c *Checks) Get(ctx context.Context, cid *lokahi.CheckID) (*lokahi.Check, error) {
-	dck, err := c.getCheck(ctx, cid.Id)
+	dck, err := c.DB.Get(ctx, cid.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -61,24 +58,9 @@ func (c *Checks) Get(ctx context.Context, cid *lokahi.CheckID) (*lokahi.Check, e
 	return dck.AsProto(), nil
 }
 
-// getCheck gets a check from the database
-func (c *Checks) getCheck(ctx context.Context, id string) (*database.Check, error) {
-	var ck database.Check
-	err := c.DB.Where("uuid = ?", id).First(&ck).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &ck, nil
-}
-
 // List returns a page of checks based on a few options.
 func (c *Checks) List(ctx context.Context, opts *lokahi.ListOpts) (*lokahi.ChecksPage, error) {
-	var dchecks []database.Check
-
-	err := c.DB.
-		Limit(int(opts.Count)).
-		Offset(int(opts.Page * opts.Count)).Find(&dchecks).Error
+	dchecks, err := c.DB.List(ctx, int(opts.Count), int(opts.Offset))
 	if err != nil {
 		return nil, err
 	}
@@ -94,24 +76,29 @@ func (c *Checks) List(ctx context.Context, opts *lokahi.ListOpts) (*lokahi.Check
 
 // Put updates a Check.
 func (c *Checks) Put(ctx context.Context, chk *lokahi.Check) (*lokahi.Check, error) {
-	dck, err := c.getCheck(ctx, chk.Id)
+	dck, err := c.DB.Get(ctx, chk.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	dck.URL = chk.Url
-	dck.WebhookURL = chk.WebhookUrl
-	dck.WebhookResponseTimeNanoseconds = chk.WebhookResponseTimeNanoseconds
-	dck.Every = int(chk.Every)
-	dck.PlaybookURL = chk.PlaybookUrl
-	dck.State = chk.State.String()
+	if a := chk.Url; a != "" {
+		dck.URL = a
+	}
 
-	err = c.DB.Save(dck).Error
+	if a := dck.WebhookURL; a != "" {
+		dck.WebhookURL = chk.WebhookUrl
+	}
+
+	if a := dck.PlaybookURL; a != "" {
+		dck.PlaybookURL = chk.PlaybookUrl
+	}
+
+	result, err := c.DB.Put(ctx, *dck)
 	if err != nil {
 		return nil, err
 	}
 
-	return dck.AsProto(), nil
+	return result.AsProto(), nil
 }
 
 // Status returns the detailed histogram status of a check.

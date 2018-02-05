@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	listCount, listPage int
-	listStatus          bool
+	listCount, listOffset int
+	listStatus            bool
 )
 
 func init() {
 	listCmd.Flags().IntVarP(&listCount, "count", "c", 30, "number of checks to return at once")
-	listCmd.Flags().IntVarP(&listPage, "page", "p", 0, "page number of checks")
+	listCmd.Flags().IntVarP(&listOffset, "offset", "o", 0, "number of checks to offset")
 	listCmd.Flags().BoolVarP(&listStatus, "status", "s", false, "include detailed histogram status?")
 
 	rootCmd.AddCommand(listCmd)
@@ -39,7 +39,7 @@ var listCmd = &cobra.Command{
 
 		chk, err := checks.List(ctx, &lokahi.ListOpts{
 			Count:         int32(listCount),
-			Page:          int32(listPage),
+			Offset:        int32(listOffset),
 			IncludeStatus: listStatus,
 		})
 		if err != nil {
