@@ -13,16 +13,16 @@ message CheckIDs {
   repeated string ids = 1;
 }
 
-message Run {
-  message Health {
+message Health {
     string url = 1;
     int64 response_time_nanoseconds = 2;
     int32 status_code = 3;
     string body = 4;
     string error = 5;
     bool healthy = 6;
-  }
+}
 
+message Run {
   string id = 1;
   CheckIDs cids = 2;
   bool finished = 3;
@@ -63,4 +63,10 @@ message HistogramData {
   // p99_nanoseconds is the 95th percentile of the http web response times in
   // nanoseconds.
   int64 p99_nanoseconds = 8;
+}
+
+message WebhookData {
+  string run_id = 1;
+  bytes check_proto = 2;
+  Health health = 3;
 }

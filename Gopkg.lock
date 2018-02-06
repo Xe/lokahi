@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/PuerkitoBio/rehttp"
+  packages = ["."]
+  revision = "5989d9566be1c6334786e55385219c2b9ab1c4dc"
+
+[[projects]]
   name = "github.com/Xe/ln"
   packages = ["."]
   revision = "466e05b2ef3e48ce08a367b6aaac09ee29a124e5"
@@ -90,6 +96,22 @@
   version = "v3.0.1"
 
 [[projects]]
+  name = "github.com/nats-io/go-nats"
+  packages = [
+    ".",
+    "encoders/builtin",
+    "util"
+  ]
+  revision = "d66cb54e6b7bdd93f0b28afc8450d84c780dfb68"
+  version = "v1.4.0"
+
+[[projects]]
+  name = "github.com/nats-io/nuid"
+  packages = ["."]
+  revision = "289cccf02c178dc782430d534e3c1f5b72af807f"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -149,11 +171,11 @@
   branch = "master"
   name = "google.golang.org/api"
   packages = ["support/bundler"]
-  revision = "778ecc7e1a521e75638be98345220b14a1856f5f"
+  revision = "d476d6e92dcf611f322cced73d8bd2842daff90b"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "abba55af5d156eea358948a9c92d6cdc0fb64823fb5842598dc85548b93127af"
+  inputs-digest = "4e4ee4060d35ff1ea314f35cc0e01e841cd0b6d87a3a4775416357ece9dd0a0d"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -15,6 +15,7 @@ import (
 	"github.com/Xe/uuid"
 	"github.com/codahale/hdrhistogram"
 	"github.com/gogo/protobuf/proto"
+	nats "github.com/nats-io/go-nats"
 	"google.golang.org/api/support/bundler"
 )
 
@@ -29,6 +30,8 @@ type LocalRun struct {
 	Rs  database.Runs
 	Ris database.RunInfos
 
+	Nc *nats.Conn
+
 	ribdl *bundler.Bundler
 	ckbdl *bundler.Bundler
 
@@ -39,27 +42,6 @@ type LocalRun struct {
 func (l *LocalRun) Minutely() error {
 	ctx := context.Background()
 	ctx = ln.WithF(ctx, ln.F{"at": "localRun Minutely cron"})
-
-	if l.ribdl == nil {
-		l.ribdl = bundler.NewBundler(database.RunInfo{}, func(i interface{}) {
-			data, ok := i.([]database.RunInfo)
-			if !ok {
-				return
-			}
-
-			for _, d := range data {
-				err := l.Ris.Put(context.Background(), d)
-				if err != nil {
-					ln.Error(context.Background(), err, ln.Action("putting deferred runinfo"), ln.F{"run_id": d.RunID, "check_id": d.CheckID})
-				}
-			}
-
-			ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
-		})
-		l.ribdl.BundleCountThreshold = 300
-		l.ribdl.DelayThreshold = 5 * time.Second
-		l.ribdl.BundleByteThreshold = 1024 * 1024 * 1024
-	}
 
 	if l.ckbdl == nil {
 		l.ckbdl = bundler.NewBundler(database.Check{}, func(i interface{}) {
@@ -109,10 +91,6 @@ func (l *LocalRun) Minutely() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		var wg sync.WaitGroup
-		wg.Add(len(result.Results))
-		done := func() { wg.Done() }
-
 		for cid, health := range result.Results {
 			cst, ok := l.lastState[cid]
 			if ok {
@@ -121,20 +99,38 @@ func (l *LocalRun) Minutely() error {
 				}
 			}
 
+			var c database.Check
+
+			for _, cc := range checks {
+				if cc.UUID == cid {
+					c = cc
+				}
+			}
+
 			l.lastState[cid] = health.StatusCode
 
-			go l.sendWebhook(ctx, cid, health, done)
+			cdata, _ := proto.Marshal(c.AsProto())
+			data, _ := proto.Marshal(&lokahiadmin.WebhookData{
+				RunId:      result.Id,
+				CheckProto: cdata,
+				Health:     health,
+			})
+			err := l.Nc.Publish("webhook.egress", data)
+			if err != nil {
+				ln.Error(ctx, err, c)
+			}
 		}
 
-		wg.Wait()
 		ln.Log(ctx, ln.Action("done sending webhooks"))
 	}()
 
 	return nil
 }
 
-func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiadmin.Run_Health, done func()) {
-	ln.Log(ctx, ln.F{"cid": cid}, ln.Action("sending webhook for"))
+// SendWebhook sends a webhook to a given target by check id.
+func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lokahiadmin.Health, done func()) {
+	cid := ck.Id
+	ln.Log(ctx, ln.F{"cid": ck.Id}, ln.Action("sending webhook for"))
 
 	logErr := func(err error, cid, u string) {
 		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
@@ -142,33 +138,22 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 
 	defer done()
 
-	ck, err := l.Cs.Get(ctx, cid)
-	if err != nil {
-		if ck == nil {
-			logErr(err, cid, "")
-			return
-		}
-
-		logErr(err, cid, ck.WebhookURL)
-		return
-	}
-
 	cs := &lokahi.CheckStatus{
-		Check: ck.AsProto(),
+		Check: ck,
 		LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
 	}
 
 	data, err := proto.Marshal(cs)
 	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
+		logErr(err, cid, ck.WebhookUrl)
 		return
 	}
 
 	buf := bytes.NewBuffer(data)
 
-	req, err := http.NewRequest("POST", ck.WebhookURL, buf)
+	req, err := http.NewRequest("POST", ck.WebhookUrl, buf)
 	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
+		logErr(err, cid, ck.WebhookUrl)
 		return
 	}
 
@@ -180,23 +165,43 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 
 	resp, err := l.HC.Do(req)
 	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
+		logErr(err, cid, ck.WebhookUrl)
 		return
 	}
 
 	if s := resp.StatusCode / 100; s != 2 {
-		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
+		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookUrl, resp.StatusCode, s), cid, ck.WebhookUrl)
 	}
 }
 
-func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.Run_Health, database.Check) {
-	result := &lokahiadmin.Run_Health{}
+// DoCheck executes a HTTP healthcheck given a run id and check.
+func (l *LocalRun) DoCheck(ctx context.Context, rid string, ck *database.Check) (*lokahiadmin.Health, database.Check) {
+	if l.ribdl == nil {
+		l.ribdl = bundler.NewBundler(database.RunInfo{}, func(i interface{}) {
+			data, ok := i.([]database.RunInfo)
+			if !ok {
+				return
+			}
 
-	ck, err := l.Cs.Get(ctx, cid)
-	if err != nil {
-		result.Error = err.Error()
-		return result, database.Check{}
+			for _, d := range data {
+				err := l.Ris.Put(context.Background(), d)
+				if err != nil {
+					ln.Error(context.Background(), err, ln.Action("putting deferred runinfo"), ln.F{"run_id": d.RunID, "check_id": d.CheckID})
+				}
+			}
+
+			ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
+		})
+		l.ribdl.BundleCountThreshold = 300
+		l.ribdl.DelayThreshold = 5 * time.Second
+		l.ribdl.BundleByteThreshold = 1024 * 1024 * 1024
 	}
+
+	if l.timing == nil {
+		l.timing = hdrhistogram.New(0, 30*10000000000000, 1)
+	}
+
+	result := &lokahiadmin.Health{}
 
 	st := time.Now()
 	req, err := http.NewRequest("GET", ck.URL, nil)
@@ -226,6 +231,10 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.R
 		ck.State = lokahi.Check_DOWN.String()
 	}
 
+	if result.Error != "" {
+		ck.State = lokahi.Check_ERROR.String()
+	}
+
 	ln.Log(ctx, ck, ln.Action("doCheckHTTPDone"), ln.F{"resp_status_code": resp.StatusCode, "resp_time": diff})
 
 	ck, err = l.Cs.Put(ctx, *ck)
@@ -237,7 +246,7 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.R
 	err = l.ribdl.Add(database.RunInfo{
 		UUID:                    uuid.New(),
 		RunID:                   rid,
-		CheckID:                 cid,
+		CheckID:                 ck.UUID,
 		ResponseStatus:          resp.StatusCode,
 		ResponseTimeNanoseconds: int64(diff),
 	}, 50)
@@ -246,7 +255,19 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.R
 	}
 
 	return result, *ck
+}
 
+func split(buf []string, lim int) [][]string {
+	var chunk []string
+	chunks := make([][]string, 0, len(buf)/lim+1)
+	for len(buf) >= lim {
+		chunk, buf = buf[:lim], buf[lim:]
+		chunks = append(chunks, chunk)
+	}
+	if len(buf) > 0 {
+		chunks = append(chunks, buf[:len(buf)])
+	}
+	return chunks
 }
 
 func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahiadmin.Run, error) {
@@ -257,23 +278,56 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	rid := uuid.New()
 
 	result := &lokahiadmin.Run{
-		Results: map[string]*lokahiadmin.Run_Health{},
+		Results: map[string]*lokahiadmin.Health{},
 		Cids:    cids,
 	}
 	defer func() { result.Finished = true }()
 	st := time.Now()
 	defer func() { result.StartTimeUnix = st.Unix() }()
 
+	var lock sync.Mutex
 	var cks []database.Check
-	for _, cid := range cids.Ids {
-		res, ck := l.doCheck(ctx, rid, cid)
 
-		if res.Error != "" {
-			panic(cid + ":" + res.Error)
-		}
+	for _, shardWork := range split(cids.Ids, 50) {
+		go func(inp []string) {
+			for _, cid := range inp {
+				dck, err := l.Cs.Get(ctx, cid)
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
 
-		result.Results[cid] = res
-		cks = append(cks, ck)
+				data, err := proto.Marshal(dck.AsProto())
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
+
+				var res lokahiadmin.Health
+				reply, err := l.Nc.Request("check.run", data, time.Minute)
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
+
+				err = proto.Unmarshal(reply.Data, &res)
+
+				if res.Error != "" {
+					panic(cid + ":" + res.Error)
+				}
+
+				dck, err = l.Cs.Get(ctx, cid)
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
+
+				lock.Lock()
+				result.Results[cid] = &res
+				cks = append(cks, *dck)
+				lock.Unlock()
+			}
+		}(shardWork)
 	}
 
 	for len(cks) != len(cids.Ids) {
