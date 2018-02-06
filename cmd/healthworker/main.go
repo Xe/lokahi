@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/PuerkitoBio/rehttp"
@@ -60,43 +61,48 @@ func main() {
 		Ris: database.RunInfosPostgres(db),
 	}
 
-	nc, err := nats.Connect(cfg.NatsURL)
-	if err != nil {
-		log.Fatal(err)
+	for range make([]struct{}, runtime.NumCPU()*4) {
+		nc, err := nats.Connect(cfg.NatsURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		sc, err := nc.QueueSubscribe("check.run", "healthworker", func(m *nats.Msg) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			pck := &lokahi.Check{}
+			err := proto.Unmarshal(m.Data, pck)
+			if err != nil {
+				ln.Error(ctx, err, ln.Action("nats check.run handler unmarshal check"))
+				return
+			}
+
+			ck, err := lr.Cs.Get(ctx, pck.Id)
+			if err != nil {
+				ln.Error(ctx, err, ln.Action("nats check.run handler fetch check from database"))
+				return
+			}
+
+			hlt, _ := lr.DoCheck(ctx, uuid.New(), ck)
+			data, err := proto.Marshal(hlt)
+			if err != nil {
+				ln.Error(ctx, err, ln.Action("nats check.run handler"))
+				return
+			}
+
+			err = nc.Publish(m.Reply, data)
+			if err != nil {
+				ln.Error(ctx, err)
+			}
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		sc.SetPendingLimits(5000, 65535)
 	}
 
-	sc, err := nc.QueueSubscribe("check.run", "healthworker", func(m *nats.Msg) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		pck := &lokahi.Check{}
-		err := proto.Unmarshal(m.Data, pck)
-		if err != nil {
-			ln.Error(ctx, err, ln.Action("nats check.run handler unmarshal check"))
-			return
-		}
-
-		ck, err := lr.Cs.Get(ctx, pck.Id)
-		if err != nil {
-			ln.Error(ctx, err, ln.Action("nats check.run handler fetch check from database"))
-			return
-		}
-
-		hlt, _ := lr.DoCheck(ctx, uuid.New(), ck)
-		data, err := proto.Marshal(hlt)
-		if err != nil {
-			ln.Error(ctx, err, ln.Action("nats check.run handler"))
-			return
-		}
-
-		err = nc.Publish(m.Reply, data)
-		if err != nil {
-			ln.Error(ctx, err)
-		}
-	})
-	sc.SetPendingLimits(5000, 65535)
-
-	ln.Log(ctx, ln.Action("waiting for work..."))
+	ln.Log(ctx, ln.Action("waiting for work..."), ln.F{"threads": runtime.NumCPU() * 4})
 	for {
 		select {}
 	}

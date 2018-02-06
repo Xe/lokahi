@@ -42,6 +42,7 @@ type LocalRun struct {
 func (l *LocalRun) Minutely() error {
 	ctx := context.Background()
 	ctx = ln.WithF(ctx, ln.F{"at": "localRun Minutely cron"})
+	ln.Log(ctx)
 
 	if l.ckbdl == nil {
 		l.ckbdl = bundler.NewBundler(database.Check{}, func(i interface{}) {
@@ -57,7 +58,7 @@ func (l *LocalRun) Minutely() error {
 				}
 			}
 
-			ln.Log(context.Background(), ln.Action("put deferred check"), ln.F{"count": len(data)})
+			//ln.Log(context.Background(), ln.Action("put deferred check"), ln.F{"count": len(data)})
 		})
 		l.ckbdl.BundleCountThreshold = 300
 		l.ckbdl.DelayThreshold = time.Second
@@ -130,7 +131,6 @@ func (l *LocalRun) Minutely() error {
 // SendWebhook sends a webhook to a given target by check id.
 func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lokahiadmin.Health, done func()) {
 	cid := ck.Id
-	ln.Log(ctx, ln.F{"cid": ck.Id}, ln.Action("sending webhook for"))
 
 	logErr := func(err error, cid, u string) {
 		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
@@ -190,7 +190,7 @@ func (l *LocalRun) DoCheck(ctx context.Context, rid string, ck *database.Check) 
 				}
 			}
 
-			ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
+			//ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
 		})
 		l.ribdl.BundleCountThreshold = 300
 		l.ribdl.DelayThreshold = 5 * time.Second
@@ -234,8 +234,6 @@ func (l *LocalRun) DoCheck(ctx context.Context, rid string, ck *database.Check) 
 	if result.Error != "" {
 		ck.State = lokahi.Check_ERROR.String()
 	}
-
-	ln.Log(ctx, ck, ln.Action("doCheckHTTPDone"), ln.F{"resp_status_code": resp.StatusCode, "resp_time": diff})
 
 	ck, err = l.Cs.Put(ctx, *ck)
 	if err != nil {
