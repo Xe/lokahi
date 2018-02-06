@@ -25,12 +25,16 @@ services:
       PORT: 9001
     command: sample_hook
 
+  nats:
+    image: nats:1.0.4
+
   lokahid:
     image: xena/lokahi
     restart: always
     depends_on:
       - "db"
     environment:
+      NATS_URL: nats://nats:4222
       DATABASE_URL: postgres://postgres:hunter2@db:5432/postgres?sslmode=disable
       PORT: 24253
     ports:
