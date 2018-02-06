@@ -59,6 +59,8 @@ func main() {
 	}
 
 	sc, err := nc.Subscribe("webhook.egress", func(m *nats.Msg) {
+		ln.Log(ctx, ln.Action("handler started"), ln.F{"channel": "webhook.egress"})
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
@@ -83,4 +85,8 @@ func main() {
 	}
 	sc.SetPendingLimits(500, 65535)
 
+	ln.Log(ctx, ln.Action("waiting for work..."))
+	for {
+		select {}
+	}
 }
