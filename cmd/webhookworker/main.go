@@ -85,6 +85,18 @@ func main() {
 			return
 		}
 
+		if wd.Health.Healthy {
+			c.State = lokahi.Check_UP
+		} else {
+			c.State = lokahi.Check_DOWN
+		}
+
+		if wd.Health.Error != "" {
+			c.State = lokahi.Check_ERROR
+		}
+
+		nc.Publish("check.errors", m.Data)
+
 		lr.SendWebhook(ctx, c, wd.Health, func() {})
 	})
 	if err != nil {
