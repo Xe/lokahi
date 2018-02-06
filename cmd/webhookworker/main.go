@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/PuerkitoBio/rehttp"
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/internal/lokahiadminserver"
@@ -51,8 +52,14 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
+	tr := rehttp.NewTransport(
+		nil, // will use http.DefaultTransport
+		rehttp.RetryAll(rehttp.RetryMaxRetries(3), rehttp.RetryTemporaryErr()), // max 3 retries for Temporary errors
+		rehttp.ConstDelay(time.Second),                                         // wait 1s between retries
+	)
+
 	lr := &lokahiadminserver.LocalRun{
-		HC:  &http.Client{},
+		HC:  &http.Client{Transport: tr},
 		Cs:  database.ChecksPostgres(db),
 		Rs:  database.RunsPostgres(db),
 		Ris: database.RunInfosPostgres(db),
