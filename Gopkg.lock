@@ -90,6 +90,22 @@
   version = "v3.0.1"
 
 [[projects]]
+  name = "github.com/nats-io/go-nats"
+  packages = [
+    ".",
+    "encoders/builtin",
+    "util"
+  ]
+  revision = "d66cb54e6b7bdd93f0b28afc8450d84c780dfb68"
+  version = "v1.4.0"
+
+[[projects]]
+  name = "github.com/nats-io/nuid"
+  packages = ["."]
+  revision = "289cccf02c178dc782430d534e3c1f5b72af807f"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -149,11 +165,11 @@
   branch = "master"
   name = "google.golang.org/api"
   packages = ["support/bundler"]
-  revision = "778ecc7e1a521e75638be98345220b14a1856f5f"
+  revision = "d476d6e92dcf611f322cced73d8bd2842daff90b"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "abba55af5d156eea358948a9c92d6cdc0fb64823fb5842598dc85548b93127af"
+  inputs-digest = "cacde8a88dbe3a44d247540b04630c57742a659eefd9dbcdacb784570acdcce1"
   solver-name = "gps-cdcl"
   solver-version = 1
