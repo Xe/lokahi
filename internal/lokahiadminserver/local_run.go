@@ -178,16 +178,11 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 	req.Header.Add("Accept", "application/protobuf")
 	req.Header.Add("User-Agent", "lokahi/dev (+https://github.com/Xe/lokahi)")
 
-	st := time.Now()
-	var ed time.Time
-	var diff time.Duration
 	resp, err := l.HC.Do(req)
 	if err != nil {
 		logErr(err, cid, ck.WebhookURL)
-		goto save
+		return
 	}
-	ed = time.Now()
-	diff = ed.Sub(st)
 
 	if s := resp.StatusCode / 100; s != 2 {
 		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
@@ -256,7 +251,7 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.R
 
 func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahiadmin.Run, error) {
 	if l.timing == nil {
-		l.timing = hdrhistogram.New(0, 300000000000, 1)
+		l.timing = hdrhistogram.New(0, 30*10000000000000, 1)
 	}
 
 	rid := uuid.New()
