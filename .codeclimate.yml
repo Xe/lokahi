@@ -3,3 +3,5 @@ version: "2"
 exclude_patterns:
   - "_tools/"
   - "vendor/"
+  - "**/*.twirp.go"
+  - "**/*.pb.go"
