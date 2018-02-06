@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/Xe/ln"
@@ -15,6 +14,7 @@ import (
 	"github.com/Xe/uuid"
 	"github.com/codahale/hdrhistogram"
 	"github.com/gogo/protobuf/proto"
+	nats "github.com/nats-io/go-nats"
 	"google.golang.org/api/support/bundler"
 )
 
@@ -28,6 +28,8 @@ type LocalRun struct {
 	Cs  database.Checks
 	Rs  database.Runs
 	Ris database.RunInfos
+
+	Nc *nats.Conn
 
 	ribdl *bundler.Bundler
 	ckbdl *bundler.Bundler
@@ -109,10 +111,6 @@ func (l *LocalRun) Minutely() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		var wg sync.WaitGroup
-		wg.Add(len(result.Results))
-		done := func() { wg.Done() }
-
 		for cid, health := range result.Results {
 			cst, ok := l.lastState[cid]
 			if ok {
@@ -121,20 +119,38 @@ func (l *LocalRun) Minutely() error {
 				}
 			}
 
+			var c database.Check
+
+			for _, cc := range checks {
+				if cc.UUID == cid {
+					c = cc
+				}
+			}
+
 			l.lastState[cid] = health.StatusCode
 
-			go l.sendWebhook(ctx, cid, health, done)
+			cdata, _ := proto.Marshal(c.AsProto())
+			data, _ := proto.Marshal(&lokahiadmin.WebhookData{
+				RunId:      result.Id,
+				CheckProto: cdata,
+				Health:     health,
+			})
+			err := l.Nc.Publish("webhook.egress", data)
+			if err != nil {
+				ln.Error(ctx, err, c)
+			}
 		}
 
-		wg.Wait()
 		ln.Log(ctx, ln.Action("done sending webhooks"))
 	}()
 
 	return nil
 }
 
-func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiadmin.Run_Health, done func()) {
-	ln.Log(ctx, ln.F{"cid": cid}, ln.Action("sending webhook for"))
+// SendWebhook sends a webhook to a given target by check id.
+func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lokahiadmin.Health, done func()) {
+	cid := ck.Id
+	ln.Log(ctx, ln.F{"cid": ck.Id}, ln.Action("sending webhook for"))
 
 	logErr := func(err error, cid, u string) {
 		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
@@ -142,33 +158,22 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 
 	defer done()
 
-	ck, err := l.Cs.Get(ctx, cid)
-	if err != nil {
-		if ck == nil {
-			logErr(err, cid, "")
-			return
-		}
-
-		logErr(err, cid, ck.WebhookURL)
-		return
-	}
-
 	cs := &lokahi.CheckStatus{
-		Check: ck.AsProto(),
+		Check: ck,
 		LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
 	}
 
 	data, err := proto.Marshal(cs)
 	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
+		logErr(err, cid, ck.WebhookUrl)
 		return
 	}
 
 	buf := bytes.NewBuffer(data)
 
-	req, err := http.NewRequest("POST", ck.WebhookURL, buf)
+	req, err := http.NewRequest("POST", ck.WebhookUrl, buf)
 	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
+		logErr(err, cid, ck.WebhookUrl)
 		return
 	}
 
@@ -180,17 +185,17 @@ func (l *LocalRun) sendWebhook(ctx context.Context, cid string, health *lokahiad
 
 	resp, err := l.HC.Do(req)
 	if err != nil {
-		logErr(err, cid, ck.WebhookURL)
+		logErr(err, cid, ck.WebhookUrl)
 		return
 	}
 
 	if s := resp.StatusCode / 100; s != 2 {
-		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
+		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookUrl, resp.StatusCode, s), cid, ck.WebhookUrl)
 	}
 }
 
-func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.Run_Health, database.Check) {
-	result := &lokahiadmin.Run_Health{}
+func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.Health, database.Check) {
+	result := &lokahiadmin.Health{}
 
 	ck, err := l.Cs.Get(ctx, cid)
 	if err != nil {
@@ -257,7 +262,7 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	rid := uuid.New()
 
 	result := &lokahiadmin.Run{
-		Results: map[string]*lokahiadmin.Run_Health{},
+		Results: map[string]*lokahiadmin.Health{},
 		Cids:    cids,
 	}
 	defer func() { result.Finished = true }()

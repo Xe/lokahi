@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,11 +19,13 @@ import (
 	"github.com/heroku/x/scrub"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	nats "github.com/nats-io/go-nats"
 	"github.com/robfig/cron"
 )
 
 type config struct {
 	DatabaseURL string `env:"DATABASE_URL,required"`
+	NatsURL     string `env:"NATS_URL,required"`
 	NoPass      bool   `env:"NO_PASS" envDefault:"false"`
 	Port        string `env:"PORT" envDefault:"5000"`
 }
@@ -40,6 +43,13 @@ func (c config) F() ln.F {
 		result["env_DATABASE_URL"] = scrub.URL(u)
 	}
 
+	u, err = url.Parse(c.NatsURL)
+	if err != nil {
+		result["env_NATS_URL_err"] = err
+	} else {
+		result["env_NATS_URL"] = scrub.URL(u)
+	}
+
 	return result
 }
 
@@ -53,6 +63,11 @@ func main() {
 	err := env.Parse(&cfg)
 	if err != nil {
 		ln.FatalErr(ctx, err)
+	}
+
+	nc, err := nats.Connect(cfg.NatsURL)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	ctx = ln.WithF(ctx, cfg.F())
@@ -70,12 +85,16 @@ func main() {
 	}
 
 	cr := cron.New()
-	cks := &lokahiserver.Checks{DB: database.ChecksPostgres(db)}
+	cks := &lokahiserver.Checks{
+		DB: database.ChecksPostgres(db),
+	}
+
 	lr := &lokahiadminserver.LocalRun{
 		HC:  &http.Client{},
 		Cs:  database.ChecksPostgres(db),
 		Rs:  database.RunsPostgres(db),
 		Ris: database.RunInfosPostgres(db),
+		Nc:  nc,
 	}
 	mux := http.NewServeMux()
 
