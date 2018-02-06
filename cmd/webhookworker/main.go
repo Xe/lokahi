@@ -13,6 +13,7 @@ import (
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/caarlos0/env"
+	"github.com/codahale/hdrhistogram"
 	"github.com/gogo/protobuf/proto"
 	"github.com/jmoiron/sqlx"
 	nats "github.com/nats-io/go-nats"
@@ -65,8 +66,28 @@ func main() {
 		Ris: database.RunInfosPostgres(db),
 	}
 
-	sc, err := nc.Subscribe("webhook.egress", func(m *nats.Msg) {
-		ln.Log(ctx, ln.Action("handler started"), ln.F{"channel": "webhook.egress"})
+	hs := hdrhistogram.New(0, 9999999999999, 1)
+
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+
+			ln.Log(
+				ctx,
+				ln.Action("performance data"),
+				ln.F{
+					"min":  hs.Min(),
+					"mean": hs.Mean(),
+					"max":  hs.Max(),
+					"p95":  hs.ValueAtQuantile(95),
+				},
+			)
+		}
+	}()
+
+	sc, err := nc.QueueSubscribe("webhook.egress", "webhookworker", func(m *nats.Msg) {
+		st := time.Now()
+		defer func() { hs.RecordValue(int64(time.Now().Sub(st))) }()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
