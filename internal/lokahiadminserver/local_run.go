@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Xe/ln"
@@ -41,27 +42,6 @@ type LocalRun struct {
 func (l *LocalRun) Minutely() error {
 	ctx := context.Background()
 	ctx = ln.WithF(ctx, ln.F{"at": "localRun Minutely cron"})
-
-	if l.ribdl == nil {
-		l.ribdl = bundler.NewBundler(database.RunInfo{}, func(i interface{}) {
-			data, ok := i.([]database.RunInfo)
-			if !ok {
-				return
-			}
-
-			for _, d := range data {
-				err := l.Ris.Put(context.Background(), d)
-				if err != nil {
-					ln.Error(context.Background(), err, ln.Action("putting deferred runinfo"), ln.F{"run_id": d.RunID, "check_id": d.CheckID})
-				}
-			}
-
-			ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
-		})
-		l.ribdl.BundleCountThreshold = 300
-		l.ribdl.DelayThreshold = 5 * time.Second
-		l.ribdl.BundleByteThreshold = 1024 * 1024 * 1024
-	}
 
 	if l.ckbdl == nil {
 		l.ckbdl = bundler.NewBundler(database.Check{}, func(i interface{}) {
@@ -194,14 +174,34 @@ func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lo
 	}
 }
 
-func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.Health, database.Check) {
-	result := &lokahiadmin.Health{}
+// DoCheck executes a HTTP healthcheck given a run id and check.
+func (l *LocalRun) DoCheck(ctx context.Context, rid string, ck *database.Check) (*lokahiadmin.Health, database.Check) {
+	if l.ribdl == nil {
+		l.ribdl = bundler.NewBundler(database.RunInfo{}, func(i interface{}) {
+			data, ok := i.([]database.RunInfo)
+			if !ok {
+				return
+			}
 
-	ck, err := l.Cs.Get(ctx, cid)
-	if err != nil {
-		result.Error = err.Error()
-		return result, database.Check{}
+			for _, d := range data {
+				err := l.Ris.Put(context.Background(), d)
+				if err != nil {
+					ln.Error(context.Background(), err, ln.Action("putting deferred runinfo"), ln.F{"run_id": d.RunID, "check_id": d.CheckID})
+				}
+			}
+
+			ln.Log(context.Background(), ln.Action("put deferred runinfo"), ln.F{"count": len(data)})
+		})
+		l.ribdl.BundleCountThreshold = 300
+		l.ribdl.DelayThreshold = 5 * time.Second
+		l.ribdl.BundleByteThreshold = 1024 * 1024 * 1024
 	}
+
+	if l.timing == nil {
+		l.timing = hdrhistogram.New(0, 30*10000000000000, 1)
+	}
+
+	result := &lokahiadmin.Health{}
 
 	st := time.Now()
 	req, err := http.NewRequest("GET", ck.URL, nil)
@@ -231,6 +231,10 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.H
 		ck.State = lokahi.Check_DOWN.String()
 	}
 
+	if result.Error != "" {
+		ck.State = lokahi.Check_ERROR.String()
+	}
+
 	ln.Log(ctx, ck, ln.Action("doCheckHTTPDone"), ln.F{"resp_status_code": resp.StatusCode, "resp_time": diff})
 
 	ck, err = l.Cs.Put(ctx, *ck)
@@ -242,7 +246,7 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.H
 	err = l.ribdl.Add(database.RunInfo{
 		UUID:                    uuid.New(),
 		RunID:                   rid,
-		CheckID:                 cid,
+		CheckID:                 ck.UUID,
 		ResponseStatus:          resp.StatusCode,
 		ResponseTimeNanoseconds: int64(diff),
 	}, 50)
@@ -251,7 +255,19 @@ func (l *LocalRun) doCheck(ctx context.Context, rid, cid string) (*lokahiadmin.H
 	}
 
 	return result, *ck
+}
 
+func split(buf []string, lim int) [][]string {
+	var chunk []string
+	chunks := make([][]string, 0, len(buf)/lim+1)
+	for len(buf) >= lim {
+		chunk, buf = buf[:lim], buf[lim:]
+		chunks = append(chunks, chunk)
+	}
+	if len(buf) > 0 {
+		chunks = append(chunks, buf[:len(buf)])
+	}
+	return chunks
 }
 
 func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahiadmin.Run, error) {
@@ -269,16 +285,49 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 	st := time.Now()
 	defer func() { result.StartTimeUnix = st.Unix() }()
 
+	var lock sync.Mutex
 	var cks []database.Check
-	for _, cid := range cids.Ids {
-		res, ck := l.doCheck(ctx, rid, cid)
 
-		if res.Error != "" {
-			panic(cid + ":" + res.Error)
-		}
+	for _, shardWork := range split(cids.Ids, 50) {
+		go func(inp []string) {
+			for _, cid := range inp {
+				dck, err := l.Cs.Get(ctx, cid)
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
 
-		result.Results[cid] = res
-		cks = append(cks, ck)
+				data, err := proto.Marshal(dck.AsProto())
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
+
+				var res lokahiadmin.Health
+				reply, err := l.Nc.Request("check.run", data, time.Minute)
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
+
+				err = proto.Unmarshal(reply.Data, &res)
+
+				if res.Error != "" {
+					panic(cid + ":" + res.Error)
+				}
+
+				dck, err = l.Cs.Get(ctx, cid)
+				if err != nil {
+					ln.Error(ctx, err, ln.F{"cid": cid})
+					continue
+				}
+
+				lock.Lock()
+				result.Results[cid] = &res
+				cks = append(cks, *dck)
+				lock.Unlock()
+			}
+		}(shardWork)
 	}
 
 	for len(cks) != len(cids.Ids) {
