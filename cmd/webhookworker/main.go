@@ -114,9 +114,9 @@ func main() {
 
 		if wd.Health.Error != "" {
 			c.State = lokahi.Check_ERROR
-		}
 
-		nc.Publish("check.errors", m.Data)
+			nc.Publish("check.errors", m.Data)
+		}
 
 		lr.SendWebhook(ctx, c, wd.Health, func() {})
 	})
