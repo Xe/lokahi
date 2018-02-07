@@ -84,6 +84,8 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
+	db.SetMaxOpenConns(30)
+
 	cr := cron.New()
 	cks := &lokahiserver.Checks{
 		DB: database.ChecksPostgres(db),

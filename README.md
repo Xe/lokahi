@@ -1,8 +1,6 @@
 # lokahi
 
-Lokahi is a HTTP uptime and response time monitoring service that also keeps 
-track of response time for each check in a histogram, allowing for more 
-complicated analysis of data.
+Lokahi is a HTTP uptime and response time monitoring service. Each check has a webhook URL that will have check information POST-ed to it when the service status changes.
 
 ## Building
 

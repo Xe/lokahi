@@ -48,6 +48,8 @@ func main() {
 		ln.FatalErr(ctx, err)
 	}
 
+	db.SetMaxOpenConns(30)
+
 	tr := rehttp.NewTransport(
 		nil, // will use http.DefaultTransport
 		rehttp.RetryAll(rehttp.RetryMaxRetries(3), rehttp.RetryTemporaryErr()), // max 3 retries for Temporary errors
