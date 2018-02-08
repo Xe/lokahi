@@ -25,6 +25,30 @@ service Checks {
   rpc Status(CheckID) returns (CheckStatus);
 }
 
+// Runs allows clients to run a set of checks and returns a Run result.
+service Runs {
+  rpc Checks(CheckIDs) returns (Run);
+}
+
+// Health is the individual health state of a service.
+message Health {
+  string url = 1;
+  int64 response_time_nanoseconds = 2;
+  int32 status_code = 3;
+  string error = 4;
+  bool healthy = 5;
+}
+
+message Run {
+  string id = 1;
+  CheckIDs cids = 2;
+  bool finished = 3;
+  map<string, Health> results = 4;
+  int64 start_time_unix = 5;
+  int64 elapsed_nanoseconds = 6;
+}
+
+
 // CreateOpts contains arguments used to construct a Check.
 message CreateOpts {
   // url is the HTTP/S url that will be monitored.
@@ -45,6 +69,11 @@ message CreateOpts {
 message CheckID {
   // id is the Check id.
   string id = 1;
+}
+
+// CheckIDs is a set of check ID's.
+message CheckIDs {
+  repeated string ids = 1;
 }
 
 // Check is an individual HTTP check.
