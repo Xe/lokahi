@@ -12,6 +12,7 @@ import (
 	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/Xe/uuid"
 	"github.com/gogo/protobuf/proto"
+	nats "github.com/nats-io/go-nats"
 )
 
 type Runs struct {
@@ -19,6 +20,7 @@ type Runs struct {
 
 	Cs database.Checks
 	Rs database.Runs
+	Nc *nats.Conn
 }
 
 func split(buf []string, lim int) [][]string {

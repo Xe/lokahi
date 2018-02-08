@@ -20,7 +20,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	nats "github.com/nats-io/go-nats"
-	"github.com/robfig/cron"
 )
 
 type config struct {
@@ -70,6 +69,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	lahc := &http.Client{
+		Transport: &lokahiadminserver.NatsRoundTripper{
+			NC: nc,
+		},
+	}
+
 	ctx = ln.WithF(ctx, cfg.F())
 
 	err = database.Migrate(cfg.DatabaseURL)
@@ -86,29 +91,19 @@ func main() {
 
 	db.SetMaxOpenConns(30)
 
-	cr := cron.New()
 	cks := &lokahiserver.Checks{
 		DB: database.ChecksPostgres(db),
 	}
 
-	lr := &lokahiadminserver.LocalRun{
-		HC:  &http.Client{},
-		Cs:  database.ChecksPostgres(db),
-		Rs:  database.RunsPostgres(db),
-		Ris: database.RunInfosPostgres(db),
-		Nc:  nc,
+	rs := &lokahiserver.Runs{
+		Ah: lokahiadmin.NewHealthProtobufClient("http://nats", lahc),
+
+		Cs: database.ChecksPostgres(db),
+		Rs: database.RunsPostgres(db),
 	}
+
 	mux := http.NewServeMux()
-
-	cr.AddFunc("@every 1m", func() {
-		err := lr.Minutely()
-		if err != nil {
-			ln.Error(context.Background(), err)
-		}
-	})
-	cr.Start()
-
-	mux.Handle(lokahiadmin.RunLocalPathPrefix, lokahiadmin.NewRunLocalServer(lr, makeLnHooks()))
+	mux.Handle(lokahi.RunsPathPrefix, lokahi.NewRunsServer(rs, makeLnHooks()))
 	mux.Handle(lokahi.ChecksPathPrefix, lokahi.NewChecksServer(cks, makeLnHooks()))
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
