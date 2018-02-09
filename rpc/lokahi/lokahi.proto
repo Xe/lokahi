@@ -92,6 +92,9 @@ message CheckStatus {
 
   // histogram_data is the detailed histogram data for this check.
   HistogramData histogram_data = 3;
+
+  // resp_status_code is the HTTP status response code of the URL being monitored.
+  int32 resp_status_code = 4;
 }
 
 // ListOpts contains options to the service Checks method List.
