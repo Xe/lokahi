@@ -11,7 +11,7 @@ import (
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/internal/lokahiadminserver"
-	"github.com/Xe/lokahi/rpc/lokahi"
+	"github.com/Xe/lokahi/rpc/lokahiadmin"
 	"github.com/Xe/uuid"
 	"github.com/caarlos0/env"
 	"github.com/gogo/protobuf/proto"
@@ -56,10 +56,9 @@ func main() {
 		rehttp.ConstDelay(time.Second),                                         // wait 1s between retries
 	)
 
-	lr := &lokahiadminserver.LocalRun{
+	h := &lokahiadminserver.Health{
 		HC:  &http.Client{Transport: tr},
 		Cs:  database.ChecksPostgres(db),
-		Rs:  database.RunsPostgres(db),
 		Ris: database.RunInfosPostgres(db),
 	}
 
@@ -69,24 +68,25 @@ func main() {
 			log.Fatal(err)
 		}
 
-		sc, err := nc.QueueSubscribe("check.run", "healthworker", func(m *nats.Msg) {
+		sc, err := nc.QueueSubscribe(lokahiadminserver.HealthPath("Run"), "healthworker", func(m *nats.Msg) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
 
-			pck := &lokahi.Check{}
-			err := proto.Unmarshal(m.Data, pck)
+			rr := &lokahiadmin.RunRequest{}
+			err := proto.Unmarshal(m.Data, rr)
 			if err != nil {
 				ln.Error(ctx, err, ln.Action("nats check.run handler unmarshal check"))
 				return
 			}
 
-			ck, err := lr.Cs.Get(ctx, pck.Id)
+			rid := uuid.New()
+
+			hlt, err := h.Run(ctx, rr)
 			if err != nil {
-				ln.Error(ctx, err, ln.Action("nats check.run handler fetch check from database"))
+				ln.Error(ctx, err, ln.Action("nats check.run handler"))
 				return
 			}
 
-			hlt, _ := lr.DoCheck(ctx, uuid.New(), ck)
 			data, err := proto.Marshal(hlt)
 			if err != nil {
 				ln.Error(ctx, err, ln.Action("nats check.run handler"))

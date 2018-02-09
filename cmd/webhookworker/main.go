@@ -61,11 +61,10 @@ func main() {
 		rehttp.ConstDelay(time.Second),                                         // wait 1s between retries
 	)
 
-	lr := &lokahiadminserver.LocalRun{
-		HC:  &http.Client{Transport: tr},
-		Cs:  database.ChecksPostgres(db),
-		Rs:  database.RunsPostgres(db),
-		Ris: database.RunInfosPostgres(db),
+	w := &lokahiadminserver.Webhook{
+		HC: &http.Client{
+			Transport: tr,
+		},
 	}
 
 	hs := hdrhistogram.New(0, 9999999999999, 1)
@@ -87,40 +86,42 @@ func main() {
 		}
 	}()
 
-	sc, err := nc.QueueSubscribe("webhook.egress", "webhookworker", func(m *nats.Msg) {
+	sc, err := nc.QueueSubscribe(lokahiadminserver.WebhookPath("Execute"), "webhookworker", func(m *nats.Msg) {
 		st := time.Now()
 		defer func() { hs.RecordValue(int64(time.Now().Sub(st))) }()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		wd := &lokahiadmin.WebhookData{}
+		wd := &lokahiadmin.WebhookRequest{}
 		err := proto.Unmarshal(m.Data, wd)
 		if err != nil {
 			ln.Error(ctx, err, ln.Action("nats webhook.egress handler"))
 			return
 		}
-
-		c := &lokahi.Check{}
-		err = proto.Unmarshal(wd.CheckProto, c)
-		if err != nil {
-			ln.Error(ctx, err, ln.Action("nats webhook.egress handler"))
-			return
-		}
+		c := wd.Check
 
 		if wd.Health.Healthy {
-			c.State = lokahi.Check_UP
+			c.State = lokahi.Check_UP.String()
 		} else {
-			c.State = lokahi.Check_DOWN
+			c.State = lokahi.Check_DOWN.String()
 		}
 
 		if wd.Health.Error != "" {
-			c.State = lokahi.Check_ERROR
+			c.State = lokahi.Check_ERROR.String()
 
 			nc.Publish("check.errors", m.Data)
 		}
 
-		lr.SendWebhook(ctx, c, wd.Health, func() {})
+		w.Execute(ctx, wd)
+
+		data, err := proto.Marshal(&lokahiadmin.Nil{})
+		if err != nil {
+			ln.Error(ctx, err)
+			return
+		}
+
+		nc.Publish(m.Reply, data)
 	})
 	if err != nil {
 		ln.FatalErr(ctx, err, ln.Action("nats webhook.egress subscribe"))

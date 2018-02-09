@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Xe/lokahi/rpc/lokahiadmin"
+	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +26,9 @@ var runCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		rl := lokahiadmin.NewRunLocalProtobufClient(surl, &http.Client{})
+		rl := lokahi.NewRunsProtobufClient(surl, &http.Client{})
 
-		cids := &lokahiadmin.CheckIDs{}
+		cids := &lokahi.CheckIDs{}
 
 		for _, id := range args {
 			cids.Ids = append(cids.Ids, id)
