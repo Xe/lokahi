@@ -1,0 +1,410 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "lokahi.proto",
+    "description": "lokahi is a HTTP health checking and response time monitoring service.",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/twirp/github.xe.lokahi.Checks/Create": {
+      "post": {
+        "summary": "Create creates a new health check with the given options.",
+        "operationId": "Create",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiCheck"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiCreateOpts"
+            }
+          }
+        ],
+        "tags": [
+          "Checks"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.Checks/Delete": {
+      "post": {
+        "summary": "Delete removes a check by ID and returns the data that was deleted.",
+        "operationId": "Delete",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiCheck"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiCheckID"
+            }
+          }
+        ],
+        "tags": [
+          "Checks"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.Checks/Get": {
+      "post": {
+        "summary": "Get returns information on a check by ID.",
+        "operationId": "Get",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiCheck"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiCheckID"
+            }
+          }
+        ],
+        "tags": [
+          "Checks"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.Checks/List": {
+      "post": {
+        "summary": "List returns a page of checks based on a few options.",
+        "operationId": "List",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiChecksPage"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiListOpts"
+            }
+          }
+        ],
+        "tags": [
+          "Checks"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.Checks/Put": {
+      "post": {
+        "summary": "Put updates a Check.",
+        "operationId": "Put",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiCheck"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiCheck"
+            }
+          }
+        ],
+        "tags": [
+          "Checks"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.Checks/Status": {
+      "post": {
+        "summary": "Status returns the detailed histogram status of a check.",
+        "operationId": "Status",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiCheckStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiCheckID"
+            }
+          }
+        ],
+        "tags": [
+          "Checks"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.Webhook/Handle": {
+      "post": {
+        "operationId": "Handle",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lokahiNil"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/lokahiCheckStatus"
+            }
+          }
+        ],
+        "tags": [
+          "Webhook"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "CheckState": {
+      "type": "string",
+      "enum": [
+        "INIT",
+        "UP",
+        "DOWN",
+        "ERROR"
+      ],
+      "default": "INIT",
+      "description": "State is the finite state machine state."
+    },
+    "ChecksPageResult": {
+      "type": "object",
+      "properties": {
+        "check": {
+          "$ref": "#/definitions/lokahiCheck",
+          "description": "check is the individual check being listed."
+        },
+        "histogram_data": {
+          "$ref": "#/definitions/lokahiHistogramData",
+          "description": "histogram_data is the detailed histogram data for this check, this is\nnornally not set unless include_status is set in ListOpts."
+        }
+      },
+      "description": "Result is an individual List result."
+    },
+    "lokahiCheck": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "id is the unique id of this check."
+        },
+        "url": {
+          "type": "string",
+          "description": "url is the HTTP/S url that will be monitored."
+        },
+        "webhook_url": {
+          "type": "string",
+          "description": "webhook_url is the HTTP/S url that will be HTTPS POST-ed to with the body\ncontaining a protobuf-encoded CheckStatus message."
+        },
+        "webhook_response_time_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "webhook_response_time_nanoseconds is last the response time of the webhook."
+        },
+        "every": {
+          "type": "integer",
+          "format": "int32",
+          "description": "health checks happen every number of seconds (minimum: 60, maximum: 600)."
+        },
+        "playbook_url": {
+          "type": "string",
+          "description": "playbook_url is the playbook URL that will be passed to status webhooks."
+        },
+        "state": {
+          "$ref": "#/definitions/CheckState",
+          "description": "state is the current state of this uptime check."
+        }
+      },
+      "description": "Check is an individual HTTP check."
+    },
+    "lokahiCheckID": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "id is the Check id."
+        }
+      },
+      "description": "CheckID is a small wrapper around a Check ID."
+    },
+    "lokahiCheckStatus": {
+      "type": "object",
+      "properties": {
+        "check": {
+          "$ref": "#/definitions/lokahiCheck",
+          "description": "check is the information for the relevant Check."
+        },
+        "last_response_time_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "last_response_time_nanoseconds is the last http web response time from the\nCheck's monitoring URL in nanoseconds."
+        },
+        "histogram_data": {
+          "$ref": "#/definitions/lokahiHistogramData",
+          "description": "histogram_data is the detailed histogram data for this check."
+        },
+        "resp_status_code": {
+          "type": "integer",
+          "format": "int32",
+          "description": "resp_status_code is the HTTP status response code of the URL being monitored."
+        }
+      },
+      "description": "CheckStatus contains detailed information about the uptime status of a Check.\nThis is POST-ed to webhook recipients."
+    },
+    "lokahiChecksPage": {
+      "type": "object",
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChecksPageResult"
+          }
+        }
+      },
+      "description": "ChecksPage is a paginated Check list response."
+    },
+    "lokahiCreateOpts": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "url is the HTTP/S url that will be monitored."
+        },
+        "webhook_url": {
+          "type": "string",
+          "description": "webhook_url is the HTTP/S url that will be HTTPS POST-ed to with the body\ncontaining a protobuf-encoded CheckStatus message."
+        },
+        "every": {
+          "type": "integer",
+          "format": "int32",
+          "description": "health checks happen every number of seconds (minimum: 60, maximum: 600)."
+        },
+        "playbook_url": {
+          "type": "string",
+          "description": "playbook_url is the playbook URL that will be passed to status webhooks."
+        }
+      },
+      "description": "CreateOpts contains arguments used to construct a Check."
+    },
+    "lokahiHistogramData": {
+      "type": "object",
+      "properties": {
+        "max_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "max_nanoseconds is the maximum http web response time in nanoseconds."
+        },
+        "min_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "min_nanoseconds is the minimum http web response time in nanoseconds."
+        },
+        "mean_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "mean_nanoseconds is the mean http web response time in nanoseconds."
+        },
+        "stddev": {
+          "type": "number",
+          "format": "double",
+          "description": "stddev is the standard deviation from the mean."
+        },
+        "p50_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "p50_nanoseconds is the 50th percentile of the http web response times in\nnanoseconds."
+        },
+        "p75_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "p75_nanoseconds is the 75th percentile of the http web response times in\nnanoseconds."
+        },
+        "p95_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "p95_nanoseconds is the 95th percentile of the http web response times in\nnanoseconds."
+        },
+        "p99_nanoseconds": {
+          "type": "number",
+          "format": "double",
+          "description": "p99_nanoseconds is the 95th percentile of the http web response times in\nnanoseconds."
+        }
+      },
+      "description": "HistogramData contains information from the HDR histogram maintained for\neach check."
+    },
+    "lokahiListOpts": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "count is the number of checks that will be returned."
+        },
+        "offset": {
+          "type": "integer",
+          "format": "int32",
+          "title": "offset is the number of checks that will be offset"
+        },
+        "include_status": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "include_status includes the histogram data for each check result.\nThis is O(scary). Use this with care."
+        }
+      },
+      "description": "ListOpts contains options to the service Checks method List."
+    },
+    "lokahiNil": {
+      "type": "object"
+    }
+  }
+}
