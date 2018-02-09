@@ -11,7 +11,7 @@ import (
 
 const (
 	// the version of Go to use in docker images.
-	goVersion = "1.9.3"
+	goVersion = "1.9.4"
 )
 
 // Generate runs all relevant code generation tasks.
