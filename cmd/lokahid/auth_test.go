@@ -66,7 +66,7 @@ func TestAuth(t *testing.T) {
 
 				fmt.Println(string(data))
 
-				t.Fatalf("expected resp.StatusCode to be %s, got: %s", cs.wantStatus, resp.StatusCode)
+				t.Fatalf("expected resp.StatusCode to be %d, got: %d", cs.wantStatus, resp.StatusCode)
 			}
 		})
 	}

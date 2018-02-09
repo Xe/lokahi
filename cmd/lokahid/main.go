@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 	"log"
 	"net"
@@ -159,9 +160,14 @@ func auth(user, pass string) func(next http.Handler) http.Handler {
 				return
 			}
 
-			if pair[0] != user || pair[1] != pass {
-				http.Error(w, "Not authorized", 401)
-				return
+			userCmp := subtle.ConstantTimeCompare([]byte(pair[0]), []byte(user))
+			passCmp := subtle.ConstantTimeCompare([]byte(pair[1]), []byte(pass))
+
+			if userCmp == 1 {
+				if passCmp != 1 {
+					http.Error(w, "Not authorized", 401)
+					return
+				}
 			}
 
 			next.ServeHTTP(w, r)
