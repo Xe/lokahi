@@ -141,6 +141,7 @@ func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lo
 	cs := &lokahi.CheckStatus{
 		Check: ck,
 		LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
+		RespStatusCode:              health.StatusCode,
 	}
 
 	data, err := proto.Marshal(cs)

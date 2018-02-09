@@ -27,7 +27,13 @@ func (i impl) Handle(ctx context.Context, st *lokahi.CheckStatus) (*lokahi.Nil, 
 	log.Printf("check id: %s, status: %v", st.Check.Id, st.Check.State)
 
 	sendWebhook(i.cfg.WebhookURL, webhook{
-		Text:  fmt.Sprintf("Service at %s (id: %s) is %s (response time is %v)", st.Check.Url, st.Check.Id, st.Check.State.String(), time.Duration(st.LastResponseTimeNanoseconds)),
+		Text: fmt.Sprintf(
+			"Service at %s is %s (%d in %s)",
+			st.Check.Url,
+			st.Check.State.String(),
+			st.RespStatusCode,
+			time.Duration(st.LastResponseTimeNanoseconds),
+		),
 	})
 
 	return &lokahi.Nil{}, nil
