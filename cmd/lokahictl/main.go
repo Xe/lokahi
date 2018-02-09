@@ -24,8 +24,8 @@ var (
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&connServer, "server", "s", "http://127.0.0.1:24253", "http url of the lokahid instance")
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.lokahictl.hcl)")
+	rootCmd.PersistentFlags().StringVarP(&connServer, "server", "S", "http://127.0.0.1:24253", "http url of the lokahid instance")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "C", "", "config file (default is $HOME/.lokahictl.hcl)")
 
 	viper.BindPFlag("server", rootCmd.PersistentFlags().Lookup("server"))
 }
