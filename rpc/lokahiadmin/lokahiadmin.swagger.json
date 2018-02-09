@@ -1,0 +1,189 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "lokahiadmin.proto",
+    "description": "lokahiadmin is the administrative/backend API for lokahi power usage.",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/twirp/github.xe.lokahi.admin.RunLocal/Checks": {
+      "post": {
+        "operationId": "Checks",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/adminRun"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/adminCheckIDs"
+            }
+          }
+        ],
+        "tags": [
+          "RunLocal"
+        ]
+      }
+    },
+    "/twirp/github.xe.lokahi.admin.RunLocal/Stats": {
+      "post": {
+        "operationId": "Stats",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/adminHistogramData"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/adminNil"
+            }
+          }
+        ],
+        "tags": [
+          "RunLocal"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "adminCheckIDs": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "adminHealth": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "response_time_nanoseconds": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status_code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "body": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "healthy": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    },
+    "adminHistogramData": {
+      "type": "object",
+      "properties": {
+        "max_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "max_nanoseconds is the maximum http web response time in nanoseconds."
+        },
+        "min_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "min_nanoseconds is the minimum http web response time in nanoseconds."
+        },
+        "mean_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "mean_nanoseconds is the mean http web response time in nanoseconds."
+        },
+        "stddev": {
+          "type": "string",
+          "format": "int64",
+          "description": "stddev is the standard deviation from the mean."
+        },
+        "p50_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "p50_nanoseconds is the 50th percentile of the http web response times in\nnanoseconds."
+        },
+        "p75_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "p75_nanoseconds is the 75th percentile of the http web response times in\nnanoseconds."
+        },
+        "p95_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "p95_nanoseconds is the 95th percentile of the http web response times in\nnanoseconds."
+        },
+        "p99_nanoseconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "p99_nanoseconds is the 95th percentile of the http web response times in\nnanoseconds."
+        }
+      },
+      "description": "HistogramData contains information from the HDR histogram maintained for\neach check."
+    },
+    "adminNil": {
+      "type": "object"
+    },
+    "adminRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "cids": {
+          "$ref": "#/definitions/adminCheckIDs"
+        },
+        "finished": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/adminHealth"
+          }
+        },
+        "start_time_unix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "elapsed_nanoseconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    }
+  }
+}
