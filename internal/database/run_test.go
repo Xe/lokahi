@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Xe/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -57,10 +58,12 @@ func TestRunInfos(t *testing.T) {
 	defer Destroy(durl)
 
 	ris := runInfoPostgres{db: db}
+	rid := uuid.New()
 
 	err = ris.Put(ctx, RunInfo{
-		RunID:                          "in the 90's",
-		CheckID:                        "loslovakia",
+		UUID:                           uuid.New(),
+		RunID:                          rid,
+		CheckID:                        uuid.New(),
 		ResponseTimeNanoseconds:        42069,
 		WebhookResponseTimeNanoseconds: 9001,
 	})
@@ -68,7 +71,7 @@ func TestRunInfos(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	riset, err := ris.GetRun(ctx, "in the 90's")
+	riset, err := ris.GetRun(ctx, rid)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,8 @@
 package database
 
 import (
+	"database/sql"
+
 	"github.com/Xe/lokahi/internal/database/dmigrations"
 	"github.com/mattes/migrate"
 	_ "github.com/mattes/migrate/database/postgres"
@@ -51,6 +53,14 @@ func Destroy(durl string) error {
 	if err != nil {
 		return err
 	}
+
+	db, err := sql.Open("postgres", durl)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	db.Exec("DROP TABLE schema_migrations")
 
 	return nil
 }
