@@ -27,6 +27,14 @@ func Generate() {
 	fmt.Println("reran code generation")
 }
 
+// Test runs lokahi's test suite.
+func Test() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	shouldWork(ctx, nil, wd, "go", "test", "-v", "./...")
+}
+
 // Build builds the command code into binaries in ./bin.
 func Build() {
 	ctx, cancel := context.WithCancel(context.Background())
