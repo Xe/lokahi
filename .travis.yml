@@ -1,5 +1,10 @@
 language: go
 
+sudo: required
+
+services:
+  - docker
+
 install: 
   - go get github.com/twitchtv/retool
   - curl -L https://github.com/google/protobuf/releases/download/v3.0.0-beta-2/protoc-3.0.0-beta-2-linux-x86_64.zip > protoc-release.zip
@@ -7,9 +12,11 @@ install:
   - unzip -p protoc-release.zip protoc > $HOME/.local/bin/protoc
   - chmod a+x $HOME/.local/bin/protoc
   - rm protoc-release.zip
+  - docker run --name postgres -e POSTGRES_PASSWORD=hunter2 --net=host -d
 
 go:
   - 1.x
 
 script:
+  - retool build
   - retool do mage -v travis

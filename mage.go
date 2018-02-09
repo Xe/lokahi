@@ -35,7 +35,7 @@ func Travis() {
 	// create database
 	shouldWork(ctx, nil, wd, "psql", "-c", "CREATE DATABASE test;", "-U", "postgres")
 
-	os.Setenv("DATABASE_URL", "postgres://postgres:@127.0.0.1/test?sslmode=disable")
+	os.Setenv("DATABASE_URL", "postgres://postgres:hunter2@127.0.0.1/test?sslmode=disable")
 	os.Setenv("PATH", os.Getenv("PATH")+":"+os.Getenv("HOME")+"/.local/bin")
 
 	fmt.Println("[-] building lokahi...")
