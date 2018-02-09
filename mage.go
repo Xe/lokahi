@@ -36,13 +36,14 @@ func Build() {
 
 	outd := filepath.Join(wd, "bin")
 	cmds := []string{
-		"lokahid", 
-		"lokahictl", 
-		"sample_hook", 
-		"duke-of-york", 
-		"runmigrations", 
-		"webhookworker", 
-		"healthworker", 
+		"lokahid",
+		"lokahictl",
+		"sample_hook",
+		"duke-of-york",
+		"runmigrations",
+		"webhookworker",
+		"healthworker",
+		"slack_hook",
 		"discord_hook",
 	}
 

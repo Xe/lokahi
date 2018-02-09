@@ -17,6 +17,16 @@ services:
       PORT: 9001
     command: duke-of-york
 
+  slackhook:
+    image: xena/lokahi
+    restart: always
+    depends_on:
+      - "lokahid"
+    environment:
+      PORT: 9001
+      WEBHOOK_URL: "$SLACK_WEBHOOK_URL"
+    command: slack_hook
+
   discordhook:
     image: xena/lokahi
     restart: always
