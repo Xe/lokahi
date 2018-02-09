@@ -1,3 +1,4 @@
 /bin
 /statik
 .DS_Store
+.env
