@@ -27,6 +27,23 @@ func Generate() {
 	fmt.Println("reran code generation")
 }
 
+// Travis runs initial setup needed for travis, then a full build and test cycle.
+func Travis() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// create database
+	shouldWork(ctx, nil, wd, "psql", "-c", "CREATE DATABASE test;", "-U", "postgres")
+
+	os.Setenv("DATABASE_URL", "postgres://postgres:@127.0.0.1/test?sslmode=disable")
+
+	fmt.Println("[-] building lokahi...")
+	Build()
+
+	fmt.Println("[-] testing lokahi...")
+	Test()
+}
+
 // Test runs lokahi's test suite.
 func Test() {
 	ctx, cancel := context.WithCancel(context.Background())
