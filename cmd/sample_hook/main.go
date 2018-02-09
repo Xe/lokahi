@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Xe/ln"
 	"github.com/Xe/lokahi/rpc/lokahi"
@@ -13,7 +14,7 @@ import (
 type impl struct{}
 
 func (i impl) Handle(ctx context.Context, st *lokahi.CheckStatus) (*lokahi.Nil, error) {
-	log.Printf("check id: %s, state: %s, latency: %s, status code: %d", st.Check.Id, st.Check.State, time.Duration(st.LastResponseTimeNanoseconds), st.RespStatusCode)
+	log.Printf("check id: %s, state: %s, latency: %s, status code: %d, playbook url: %s", st.Check.Id, st.Check.State, time.Duration(st.LastResponseTimeNanoseconds), st.RespStatusCode, st.Check.PlaybookUrl)
 
 	return &lokahi.Nil{}, nil
 }

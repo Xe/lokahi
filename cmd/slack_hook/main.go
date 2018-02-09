@@ -24,15 +24,14 @@ type impl struct {
 }
 
 func (i impl) Handle(ctx context.Context, st *lokahi.CheckStatus) (*lokahi.Nil, error) {
-	log.Printf("check id: %s, status: %v", st.Check.Id, st.Check.State)
-
 	sendWebhook(i.cfg.WebhookURL, webhook{
 		Text: fmt.Sprintf(
-			"Service at %s is %s (%d in %s)",
+			"Service at %s is %s (%d in %s), playbook: <%s>",
 			st.Check.Url,
 			st.Check.State.String(),
 			st.RespStatusCode,
 			time.Duration(st.LastResponseTimeNanoseconds),
+			st.Check.PlaybookUrl,
 		),
 	})
 
