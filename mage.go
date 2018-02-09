@@ -38,6 +38,7 @@ func Travis() {
 	os.Setenv("DATABASE_URL", "postgres://postgres:@127.0.0.1/test?sslmode=disable")
 
 	fmt.Println("[-] building lokahi...")
+	Generate()
 	Build()
 
 	fmt.Println("[-] testing lokahi...")

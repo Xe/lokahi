@@ -7,4 +7,4 @@ go:
   - 1.x
 
 script:
-  - retool do mage travis
+  - retool do mage -v travis
