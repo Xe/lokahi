@@ -35,7 +35,16 @@ func Build() {
 	os.Mkdir("bin", 0777)
 
 	outd := filepath.Join(wd, "bin")
-	cmds := []string{"lokahid", "lokahictl", "sample_hook", "duke-of-york", "runmigrations", "webhookworker", "healthworker"}
+	cmds := []string{
+		"lokahid", 
+		"lokahictl", 
+		"sample_hook", 
+		"duke-of-york", 
+		"runmigrations", 
+		"webhookworker", 
+		"healthworker", 
+		"discord_hook",
+	}
 
 	for _, c := range cmds {
 		shouldWork(ctx, nil, outd, "go", "build", "../cmd/"+c)
