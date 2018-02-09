@@ -46,12 +46,7 @@ var createCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		checks := lokahi.NewChecksProtobufClient(surl, &http.Client{})
+		checks := lokahi.NewChecksProtobufClient(connServer, &http.Client{})
 
 		chk, err := checks.Create(context.Background(), &lokahi.CreateOpts{
 			Url:         createURL,

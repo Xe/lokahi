@@ -30,12 +30,7 @@ var listCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			return err
-		}
-
-		checks := lokahi.NewChecksProtobufClient(surl, &http.Client{})
+		checks := lokahi.NewChecksProtobufClient(connServer, &http.Client{})
 
 		chk, err := checks.List(ctx, &lokahi.ListOpts{
 			Count:         int32(listCount),

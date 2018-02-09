@@ -17,12 +17,8 @@ var runStatsCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			return err
-		}
+		rl := lokahiadmin.NewRunLocalProtobufClient(connServer, &http.Client{})
 
-		rl := lokahiadmin.NewRunLocalProtobufClient(surl, &http.Client{})
 		chk, err := rl.Stats(ctx, &lokahiadmin.Nil{})
 		if err != nil {
 			return err

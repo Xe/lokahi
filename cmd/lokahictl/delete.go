@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/Xe/lokahi/rpc/lokahi"
@@ -20,12 +19,7 @@ var deleteCmd = &cobra.Command{
 	Long:  "delete a check by id or list of ids",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		checks := lokahi.NewChecksProtobufClient(surl, &http.Client{})
+		checks := lokahi.NewChecksProtobufClient(connServer, &http.Client{})
 		fails := map[string]string{}
 
 		for _, id := range args {

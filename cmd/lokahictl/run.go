@@ -21,13 +21,7 @@ var runCmd = &cobra.Command{
 	Long:  "run a check by id or list of ids",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		rl := lokahiadmin.NewRunLocalProtobufClient(surl, &http.Client{})
-
+		rl := lokahiadmin.NewRunLocalProtobufClient(connServer, &http.Client{})
 		cids := &lokahiadmin.CheckIDs{}
 
 		for _, id := range args {

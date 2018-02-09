@@ -46,12 +46,7 @@ var putCmd = &cobra.Command{
 		return cobra.ExactArgs(1)(cmd, args)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			return err
-		}
-
-		checks := lokahi.NewChecksProtobufClient(surl, &http.Client{})
+		checks := lokahi.NewChecksProtobufClient(connServer, &http.Client{})
 
 		chk, err := checks.Get(context.Background(), &lokahi.CheckID{Id: args[0]})
 		if err != nil {

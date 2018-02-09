@@ -16,12 +16,7 @@ var createLoadCmd = &cobra.Command{
 	Short: "creates a bunch of checks",
 	Long:  "This subcommand lets a user create a HTTP check",
 	Run: func(cmd *cobra.Command, args []string) {
-		surl, err := cmd.Root().PersistentFlags().GetString("server")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		checks := lokahi.NewChecksProtobufClient(surl, &http.Client{})
+		checks := lokahi.NewChecksProtobufClient(connServer, &http.Client{})
 
 		for range make([]struct{}, 5000) {
 			_, err := checks.Create(context.Background(), &lokahi.CreateOpts{
