@@ -13,7 +13,7 @@ import (
 type impl struct{}
 
 func (i impl) Handle(ctx context.Context, st *lokahi.CheckStatus) (*lokahi.Nil, error) {
-	log.Printf("check id: %s, status: %v", st.Check.Id, st.Check.State)
+	log.Printf("check id: %s, state: %s, latency: %s, status code: %d", st.Check.Id, st.Check.State, time.Duration(st.LastResponseTimeNanoseconds), st.RespStatusCode)
 
 	return &lokahi.Nil{}, nil
 }
