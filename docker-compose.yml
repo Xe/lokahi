@@ -58,6 +58,7 @@ services:
       - "db"
       - "nats"
     environment:
+      USERPASS: AzureDiamond:hunter2
       NATS_URL: nats://nats:4222
       DATABASE_URL: postgres://postgres:hunter2@db:5432/postgres?sslmode=disable
       PORT: 24253

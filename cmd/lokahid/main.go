@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/base64"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Xe/ln"
@@ -24,16 +27,15 @@ import (
 )
 
 type config struct {
+	UserPass    string `env:"USERPASS"`
 	DatabaseURL string `env:"DATABASE_URL,required"`
 	NatsURL     string `env:"NATS_URL,required"`
-	NoPass      bool   `env:"NO_PASS" envDefault:"false"`
 	Port        string `env:"PORT" envDefault:"5000"`
 }
 
 func (c config) F() ln.F {
 	result := ln.F{
-		"env_NO_PASS": c.NoPass,
-		"env_PORT":    c.Port,
+		"env_PORT": c.Port,
 	}
 
 	u, err := url.Parse(c.DatabaseURL)
@@ -119,8 +121,58 @@ func main() {
 		}
 	})
 
+	var h http.Handler
+	h = metaInfo(mux)
+	if cfg.UserPass != "" {
+		pair := strings.SplitN(cfg.UserPass, ":", 2)
+		if len(pair) != 2 {
+			log.Fatalf("expected %s to have one colon", cfg.UserPass)
+			return
+		}
+
+		h = auth(pair[0], pair[1])(h)
+	}
+
 	ln.Log(ctx, ln.F{"port": os.Getenv("PORT")}, ln.Action("Listening on http"))
-	ln.FatalErr(ctx, http.ListenAndServe(":"+cfg.Port, metaInfo(mux)), ln.Action("http server stopped for some reason"))
+	ln.FatalErr(ctx, http.ListenAndServe(":"+cfg.Port, h), ln.Action("http server stopped for some reason"))
+}
+
+func auth(user, pass string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+			s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+			if len(s) != 2 {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+
+			b, err := base64.StdEncoding.DecodeString(s[1])
+			if err != nil {
+				http.Error(w, err.Error(), 401)
+				return
+			}
+
+			pair := strings.SplitN(string(b), ":", 2)
+			if len(pair) != 2 {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+
+			userCmp := subtle.ConstantTimeCompare([]byte(pair[0]), []byte(user))
+			passCmp := subtle.ConstantTimeCompare([]byte(pair[1]), []byte(pass))
+
+			if userCmp == 1 {
+				if passCmp != 1 {
+					http.Error(w, "Not authorized", 401)
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func metaInfo(next http.Handler) http.Handler {
