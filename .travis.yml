@@ -1,8 +1,10 @@
 language: go
 
+install: 
+  - go get github.com/twitchtv/retool
+
 go:
   - 1.x
 
 script:
-  - go get github.com/twitchtv/retool
   - retool do mage travis
