@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"testing"
 )
 
@@ -21,23 +23,51 @@ func TestAuth(t *testing.T) {
 		name                   string
 		serverUser, serverPass string
 		clientUser, clientPass string
-	}{}
+		wantStatus             int
+	}{
+		{
+			name:       "ok",
+			serverUser: "shachi",
+			serverPass: "orca",
+			clientUser: "shachi",
+			clientPass: "orca",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "not ok",
+			serverUser: "shachi",
+			serverPass: "orca",
+			clientUser: "shachi",
+			clientPass: "orcA",
+			wantStatus: http.StatusUnauthorized,
+		},
+	}
 
 	for _, cs := range cases {
-		ts := httptest.NewServer(auth(cs.serverUser, cs.serverPass)(h))
-		defer ts.Close()
+		t.Run(cs.name, func(t *testing.T) {
+			ts := httptest.NewServer(auth(cs.serverUser, cs.serverPass)(h))
+			defer ts.Close()
 
-		req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest("GET", ts.URL, nil)
+			req.RequestURI = ""
+			req.Host = ""
+			req.Header.Add("Authorization", "Basic "+basicAuth(cs.clientUser, cs.clientPass))
 
-		req.Header.Add("Authorization", "Basic "+basicAuth(cs.clientUser, cs.clientPass))
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		resp, err := ts.Client().Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
+			if resp.StatusCode != cs.wantStatus {
+				data, err := httputil.DumpResponse(resp, true)
+				if err != nil {
+					t.Fatal(err)
+				}
 
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("expected resp.StatusCode to be %v, got: %v", http.StatusOK, resp.StatusCode)
-		}
+				fmt.Println(string(data))
+
+				t.Fatalf("expected resp.StatusCode to be %s, got: %s", cs.wantStatus, resp.StatusCode)
+			}
+		})
 	}
 }
