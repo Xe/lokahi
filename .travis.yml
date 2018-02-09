@@ -12,7 +12,7 @@ install:
   - unzip -p protoc-release.zip protoc > $HOME/.local/bin/protoc
   - chmod a+x $HOME/.local/bin/protoc
   - rm protoc-release.zip
-  - docker run --name postgres -e POSTGRES_PASSWORD=hunter2 --net=host -d
+  - docker run --name postgres -e POSTGRES_PASSWORD=hunter2 --net=host -d postgres:alpine
 
 go:
   - 1.x
