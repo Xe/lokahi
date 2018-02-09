@@ -1,5 +1,10 @@
 language: go
 
+addons:
+  apt:
+    packages:
+      - protobuf-compiler
+
 install: 
   - go get github.com/twitchtv/retool
 
