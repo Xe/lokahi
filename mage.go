@@ -40,7 +40,6 @@ func Build() {
 		"lokahictl",
 		"sample_hook",
 		"duke-of-york",
-		"runmigrations",
 		"webhookworker",
 		"healthworker",
 		"slack_hook",
