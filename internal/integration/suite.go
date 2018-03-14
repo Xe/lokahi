@@ -78,7 +78,7 @@ type Suite struct {
 
 	ClientChecks lokahi.Checks
 
-	err error
+	Err error
 }
 
 // Setup reads configuration information from the environment and then uses
@@ -162,13 +162,6 @@ func (s *Suite) Teardown() error {
 	return nil
 }
 
-// SetErr sets the suite active error to the given value. This is useful when
-// writing tests kinda like `When I try to create the Task`, `Then there was no error` /
-// `Then there was an error`.
-func (s *Suite) SetErr(err error) {
-	s.err = err
-}
-
 // GetErr fetches the suite active error.
 //
 // The suggested story fragement for this function is:
@@ -190,7 +183,7 @@ func (s *Suite) SetErr(err error) {
 // This doesn't have any branches because the zero value for any go value boxed
 // in an interface is nil.
 func (s Suite) GetErr() error {
-	return s.err
+	return s.Err
 }
 
 // WantAnError asserts that the suite active error is non-nil. If the suite active
@@ -212,7 +205,7 @@ func (s Suite) GetErr() error {
 //       s.Step(`^there was an error$`, val.Suite.WantAnError)
 //     }
 func (s Suite) WantAnError() error {
-	if s.err == nil {
+	if s.Err == nil {
 		return errors.New("expected an error, but there wasn't one")
 	}
 

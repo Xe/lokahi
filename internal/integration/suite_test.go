@@ -25,7 +25,7 @@ func TestSuite(t *testing.T) {
 	t.Run("err tools", func(t *testing.T) {
 		for _, cs := range []error{nil, errors.New("hi there")} {
 			t.Run(fmt.Sprint(cs), func(t *testing.T) {
-				s.SetErr(cs)
+				s.Err = cs
 
 				err := s.GetErr()
 				if err != cs {
