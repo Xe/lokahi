@@ -7,6 +7,7 @@ import (
 
 	"github.com/Xe/lokahi/internal/database"
 	"github.com/Xe/lokahi/rpc/lokahi"
+	"github.com/Xe/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -60,4 +61,13 @@ func TestChecks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Run("random id", func(t *testing.T) {
+		_, err := c.Get(ctx, &lokahi.CheckID{Id: uuid.New()})
+		if err == nil {
+			t.Fatal("expected fetching a random ID to not work")
+		}
+
+		t.Log(err)
+	})
 }

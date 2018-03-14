@@ -2,10 +2,20 @@
 
 
 [[projects]]
+  name = "github.com/DATA-DOG/godog"
+  packages = [
+    ".",
+    "colors",
+    "gherkin"
+  ]
+  revision = "0371765570d36374bef4ab9f62ed0491f0862a3c"
+  version = "v0.7.6"
+
+[[projects]]
   branch = "master"
   name = "github.com/PuerkitoBio/rehttp"
   packages = ["."]
-  revision = "5989d9566be1c6334786e55385219c2b9ab1c4dc"
+  revision = "11cf6ea5d3e9afda34846e1db511aa218049471c"
 
 [[projects]]
   name = "github.com/Xe/ln"
@@ -73,7 +83,7 @@
   branch = "master"
   name = "github.com/heroku/x"
   packages = ["scrub"]
-  revision = "705849e307dd75c91728463dea5bfd08ef493e64"
+  revision = "10acf83061b8fc4ba6d401be68798459b8ceccdb"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -88,7 +98,7 @@
     ".",
     "reflectx"
   ]
-  revision = "05cef0741ade10ca668982355b3f3f0bcf0ff0a8"
+  revision = "cf35089a197953c69420c8d0cecda90809764b1d"
 
 [[projects]]
   branch = "master"
@@ -108,8 +118,8 @@
 [[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
-  revision = "d419a98cdbed11a922bf76f257b7c4be79b50e73"
-  version = "v1.7.4"
+  revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
+  version = "v1.7.6"
 
 [[projects]]
   name = "github.com/mattes/migrate"
@@ -133,7 +143,7 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "a4e142e9c047c904fa2f1e144d9a84e6133024bc"
+  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
   name = "github.com/nats-io/go-nats"
@@ -187,8 +197,8 @@
 [[projects]]
   name = "github.com/spf13/cast"
   packages = ["."]
-  revision = "acbeb36b902d72a7a4c18e8f3241075e7ab763e4"
-  version = "v1.1.0"
+  revision = "8965335b8c7107321228e3e3702cab9832751bac"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -221,8 +231,8 @@
     "ctxsetters",
     "internal/contextkeys"
   ]
-  revision = "125be91eedbde9ffaec9838e5ab7d94ef2760444"
-  version = "v5.2.0"
+  revision = "1e149ba374383a4b74e836f6c9e54fede6b09c61"
+  version = "v5.3.0"
 
 [[projects]]
   branch = "master"
@@ -232,7 +242,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "f5dfe339be1d06f81b22525fe34671ee7d2c8904"
+  revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
 
 [[projects]]
   branch = "master"
@@ -244,10 +254,9 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+  revision = "8c0ece68c28377f4c326d85b94f8df0dace46f80"
 
 [[projects]]
-  branch = "master"
   name = "golang.org/x/text"
   packages = [
     "internal/gen",
@@ -257,23 +266,24 @@
     "unicode/cldr",
     "unicode/norm"
   ]
-  revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
   packages = ["support/bundler"]
-  revision = "e771abbff930c1ae3c6e2c35117fc88856f11b2f"
+  revision = "c24aa0e5ed34558ea50c016e4fb92c5e9aa69f2c"
 
 [[projects]]
-  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
+  revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
+  version = "v2.1.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "54472b05a54a36633338eeef08c8d685395afb868c30c13897ae51823e1d3ea8"
+  inputs-digest = "33faafa9b7a41e326f9d0ae3ef122e97b1900947c00a900b40d9ddc29016b998"
   solver-name = "gps-cdcl"
   solver-version = 1
