@@ -100,4 +100,18 @@ func TestChecks(t *testing.T) {
 	if len(vals) == 0 {
 		t.Fatal("no results fetched from ListByEveryValue")
 	}
+
+	t.Run("random id", func(t *testing.T) {
+		_, err := cp.Get(ctx, uuid.New())
+		if err == nil {
+			t.Fatal("expected fetching a random ID to not work")
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		_, err := cp.Get(ctx, "flarble")
+		if err == nil {
+			t.Fatal("expected fetching an invalid ID to not work")
+		}
+	})
 }
