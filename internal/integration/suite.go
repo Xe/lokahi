@@ -131,7 +131,7 @@ func (s *Suite) Setup() error {
 	}, nil))
 
 	s.TS = httptest.NewServer(s.Mux)
-	s.ClientChecks = lokahi.NewChecksProtobufClient(s.TS.URL, &http.Client{})
+	s.ClientChecks = lokahi.NewChecksJSONClient(s.TS.URL, &http.Client{})
 
 	return nil
 }
@@ -182,7 +182,7 @@ func (s *Suite) Teardown() error {
 //
 // This doesn't have any branches because the zero value for any go value boxed
 // in an interface is nil.
-func (s Suite) GetErr() error {
+func (s *Suite) GetErr() error {
 	return s.Err
 }
 
@@ -204,7 +204,7 @@ func (s Suite) GetErr() error {
 //
 //       s.Step(`^there was an error$`, val.Suite.WantAnError)
 //     }
-func (s Suite) WantAnError() error {
+func (s *Suite) WantAnError() error {
 	if s.Err == nil {
 		return errors.New("expected an error, but there wasn't one")
 	}
