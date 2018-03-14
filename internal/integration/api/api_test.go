@@ -112,6 +112,14 @@ func (a *apiCtx) iTryToListChecks() error {
 	return nil
 }
 
+func (a *apiCtx) iTryToPutTheCheck() error {
+	ck, err := a.checks.Put(context.Background(), a.rc)
+	a.rc = ck
+	a.err = err
+
+	return nil
+}
+
 func (a *apiCtx) anExampleCheck() error {
 	o := &lokahi.CreateOpts{
 		Url:         "https://google.com?" + uuid.New(),
@@ -231,6 +239,12 @@ func (a *apiCtx) iCreateTheCheck() error {
 	return nil
 }
 
+func (a *apiCtx) aRandomUrlInTheLastCheck() error {
+	a.rc.Url = "https://google.com?" + uuid.New()
+
+	return nil
+}
+
 func (a *apiCtx) theResultingCheckShouldHaveAnID() error {
 	if a.rc.Id == "" {
 		return errors.New("the check doesn't have an ID")
@@ -280,4 +294,6 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I try to list checks$`, a.iTryToListChecks)
 	s.Step(`^check list count is (\d+)$`, a.checkListCountIs)
 	s.Step(`^check list offset is (\d+)$`, a.checkListOffsetIs)
+	s.Step(`^a random url in the last check$`, a.aRandomUrlInTheLastCheck)
+	s.Step(`^I try to put the check$`, a.iTryToPutTheCheck)
 }
