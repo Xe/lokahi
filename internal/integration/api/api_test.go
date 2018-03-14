@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"strings"
+	"testing"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/Xe/lokahi/internal/integration"
@@ -13,6 +13,18 @@ import (
 	"github.com/Xe/uuid"
 	_ "github.com/lib/pq"
 )
+
+func TestApiSanity(t *testing.T) {
+	a := &api{Suite: &integration.Suite{}}
+
+	err := sql.ErrNoRows
+	a.Err = err
+
+	err = a.GetErr()
+	if err.Error() != sql.ErrNoRows.Error() {
+		t.Fatal("storage doesn't work")
+	}
+}
 
 type api struct {
 	*integration.Suite
@@ -25,18 +37,17 @@ type api struct {
 func (a *api) iTryToCreateTheCheck() error {
 	ck, err := a.ClientChecks.Create(context.Background(), a.checkCreateOpts)
 	a.rc = ck
-	a.SetErr(err)
+	a.Err = err
 
 	return nil
 }
 
 func (a *api) iTryToDeleteTheCheck() error {
-	log.Printf("deleting check %s", a.rc.Id)
 	_, err := a.ClientChecks.Delete(context.Background(), &lokahi.CheckID{
 		Id: a.rc.Id,
 	})
 
-	a.SetErr(err)
+	a.Err = err
 
 	return nil
 }
@@ -46,14 +57,14 @@ func (a *api) iTryToFetchTheCheck() error {
 		Id: a.rc.Id,
 	})
 	a.rc = ck
-	a.SetErr(err)
+	a.Err = err
 
 	return nil
 }
 
 func (a *api) iTryToListChecks() error {
 	_, err := a.ClientChecks.List(context.Background(), a.checkListOpts)
-	a.SetErr(err)
+	a.Err = err
 
 	return nil
 }
@@ -61,7 +72,7 @@ func (a *api) iTryToListChecks() error {
 func (a *api) iTryToPutTheCheck() error {
 	ck, err := a.Suite.ClientChecks.Put(context.Background(), a.rc)
 	a.rc = ck
-	a.SetErr(err)
+	a.Err = err
 
 	return nil
 }
@@ -85,7 +96,7 @@ func (a *api) anExampleCheck() error {
 }
 
 func (a *api) theCheckCannotBeFetched() error {
-	err := a.GetErr()
+	err := a.Err
 
 	if e := err.Error(); !strings.Contains(e, sql.ErrNoRows.Error()) {
 		return err

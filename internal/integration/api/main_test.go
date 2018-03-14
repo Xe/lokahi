@@ -12,7 +12,7 @@ func TestMain(m *testing.M) {
 	status := godog.RunWithOptions("godog", func(s *godog.Suite) {
 		FeatureContext(s)
 	}, godog.Options{
-		Format:    "progress",
+		Format:    "pretty",
 		Paths:     []string{"features"},
 		Randomize: time.Now().UTC().UnixNano(), // randomize scenario execution order
 	})
