@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package nrpc;
+
+option go_package = "github.com/rapidloop/nrpc";
+
+import "google/protobuf/descriptor.proto";
+
+enum SubjectRule {
+    COPY = 0;
+    TOLOWER = 1;
+}
+
+extend google.protobuf.FileOptions {
+    // A custom subject prefix to use instead of the package name
+    string packageSubject = 50000;
+    // Parameters included in the subject at the package level
+    repeated string packageSubjectParams = 50001;
+    // Default rule to build a service subject from the service name
+    SubjectRule serviceSubjectRule = 50002;
+    // Default rule to build a method subject from its name
+    SubjectRule methodSubjectRule = 50003;
+}
+
+extend google.protobuf.ServiceOptions {
+	// A custom subject token to use instead of (service name + serviceSubjectRule)
+	string serviceSubject = 51000;
+	// Parameters included in the subject at the service level
+	repeated string serviceSubjectParams = 51001;
+}
+
+extend google.protobuf.MethodOptions {
+    // A custom subject to use instead of (methor name + methodSubjectRule)
+    string methodSubject = 52000;
+    // Parameters included in the subject at the method level
+    repeated string methodSubjectParams = 52001;
+    // If true, the method returns a stream of reply messages instead of just one
+    bool streamedReply = 52002;
+}
+
+message Error {
+    enum Type {
+        CLIENT = 0;
+        SERVER = 1;
+        EOS = 3;
+    }
+    Type type = 1;
+    string message = 2;
+    uint32 msgCount = 3;
+}
+
+message Void {}
+
+message NoRequest {}
+message NoReply {}
+
+message HeartBeat {
+    bool lastbeat = 1;
+}
