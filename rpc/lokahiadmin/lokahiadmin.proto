@@ -12,9 +12,9 @@ message CheckIDs {
   repeated string ids = 1;
 }
 
-// Health is a pseudo-service that runs HTTP health checks.
-service Health {
-  rpc Run(RunRequest) returns (ServiceHealth);
+// HealthCheck is a pseudo-service that runs HTTP health checks.
+service HealthCheck {
+  rpc Run(RunRequest) returns (Health);
 }
 
 // RunRequest is a request for a healthcheck being run.
@@ -23,7 +23,7 @@ message RunRequest {
   string run_id = 2;
 }
 
-message ServiceHealth {
+message Health {
     string url = 1;
     int64 response_time_nanoseconds = 2;
     int32 status_code = 3;
@@ -36,7 +36,7 @@ message Run {
   string id = 1;
   CheckIDs cids = 2;
   bool finished = 3;
-  map<string, ServiceHealth> results = 4;
+  map<string, Health> results = 4;
   int64 start_time_unix = 5;
   int64 elapsed_nanoseconds = 6;
 }
@@ -57,13 +57,13 @@ message Check {
   string state = 9;
 }
 
-message WebhookRequest {
+message WebhookData {
   string run_id = 1;
   Check check = 2;
-  ServiceHealth health = 3;
+  Health health = 3;
 }
 
 // Webhook executes HTTP webhooks. This is expected to be run asynchronously.
 service Webhook {
-  rpc Execute(WebhookRequest) returns (Nil);
+  rpc Execute(WebhookData) returns (Nil);
 }

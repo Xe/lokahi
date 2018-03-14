@@ -95,7 +95,7 @@ func (h *RunLocalHandler) Handler(msg *nats.Msg) {
 		err = nil
 	}
 	if err != nil {
-		log.Println("RunLocalHandler: RunLocal handler failed to publish the response: %s", err)
+		log.Printf("RunLocalHandler: RunLocal handler failed to publish the response: %s", err)
 	}
 }
 
@@ -130,40 +130,40 @@ func (c *RunLocalClient) Checks(req CheckIDs) (resp Run, err error) {
 	return
 }
 
-// HealthServer is the interface that providers of the service
-// Health should implement.
-type HealthServer interface {
-	Run(ctx context.Context, req RunRequest) (resp ServiceHealth, err error)
+// HealthCheckServer is the interface that providers of the service
+// HealthCheck should implement.
+type HealthCheckServer interface {
+	Run(ctx context.Context, req RunRequest) (resp Health, err error)
 }
 
-// HealthHandler provides a NATS subscription handler that can serve a
-// subscription using a given HealthServer implementation.
-type HealthHandler struct {
+// HealthCheckHandler provides a NATS subscription handler that can serve a
+// subscription using a given HealthCheckServer implementation.
+type HealthCheckHandler struct {
 	ctx    context.Context
 	nc     nrpc.NatsConn
-	server HealthServer
+	server HealthCheckServer
 }
 
-func NewHealthHandler(ctx context.Context, nc nrpc.NatsConn, s HealthServer) *HealthHandler {
-	return &HealthHandler{
+func NewHealthCheckHandler(ctx context.Context, nc nrpc.NatsConn, s HealthCheckServer) *HealthCheckHandler {
+	return &HealthCheckHandler{
 		ctx:    ctx,
 		nc:     nc,
 		server: s,
 	}
 }
 
-func (h *HealthHandler) Subject() string {
-	return "github.xe.lokahi.admin.Health.>"
+func (h *HealthCheckHandler) Subject() string {
+	return "github.xe.lokahi.admin.HealthCheck.>"
 }
 
-func (h *HealthHandler) Handler(msg *nats.Msg) {
+func (h *HealthCheckHandler) Handler(msg *nats.Msg) {
 	var encoding string
 	var noreply bool
 	// extract method name & encoding from subject
 	_, _, name, tail, err := nrpc.ParseSubject(
-		"github.xe.lokahi.admin", 0, "Health", 0, msg.Subject)
+		"github.xe.lokahi.admin", 0, "HealthCheck", 0, msg.Subject)
 	if err != nil {
-		log.Printf("HealthHanlder: Health subject parsing failed: %v", err)
+		log.Printf("HealthCheckHanlder: HealthCheck subject parsing failed: %v", err)
 		return
 	}
 
@@ -199,7 +199,7 @@ func (h *HealthHandler) Handler(msg *nats.Msg) {
 			}
 		}
 	default:
-		log.Printf("HealthHandler: unknown name %q", name)
+		log.Printf("HealthCheckHandler: unknown name %q", name)
 		replyError = &nrpc.Error{
 			Type: nrpc.Error_CLIENT,
 			Message: "unknown name: " + name,
@@ -214,11 +214,11 @@ func (h *HealthHandler) Handler(msg *nats.Msg) {
 		err = nil
 	}
 	if err != nil {
-		log.Println("HealthHandler: Health handler failed to publish the response: %s", err)
+		log.Printf("HealthCheckHandler: HealthCheck handler failed to publish the response: %s", err)
 	}
 }
 
-type HealthClient struct {
+type HealthCheckClient struct {
 	nc      nrpc.NatsConn
 	PkgSubject string
 	Subject string
@@ -226,17 +226,17 @@ type HealthClient struct {
 	Timeout time.Duration
 }
 
-func NewHealthClient(nc nrpc.NatsConn) *HealthClient {
-	return &HealthClient{
+func NewHealthCheckClient(nc nrpc.NatsConn) *HealthCheckClient {
+	return &HealthCheckClient{
 		nc:      nc,
 		PkgSubject: "github.xe.lokahi.admin",
-		Subject: "Health",
+		Subject: "HealthCheck",
 		Encoding: "protobuf",
 		Timeout: 5 * time.Second,
 	}
 }
 
-func (c *HealthClient) Run(req RunRequest) (resp ServiceHealth, err error) {
+func (c *HealthCheckClient) Run(req RunRequest) (resp Health, err error) {
 
 	subject := c.PkgSubject + "." + c.Subject + "." + "Run"
 
@@ -252,7 +252,7 @@ func (c *HealthClient) Run(req RunRequest) (resp ServiceHealth, err error) {
 // WebhookServer is the interface that providers of the service
 // Webhook should implement.
 type WebhookServer interface {
-	Execute(ctx context.Context, req WebhookRequest) (resp Nil, err error)
+	Execute(ctx context.Context, req WebhookData) (resp Nil, err error)
 }
 
 // WebhookHandler provides a NATS subscription handler that can serve a
@@ -297,7 +297,7 @@ func (h *WebhookHandler) Handler(msg *nats.Msg) {
 			log.Printf("ExecuteHanlder: Execute subject parsing failed: %v", err)
 			break
 		}
-		var req WebhookRequest
+		var req WebhookData
 		if err := nrpc.Unmarshal(encoding, msg.Data, &req); err != nil {
 			log.Printf("ExecuteHandler: Execute request unmarshal failed: %v", err)
 			replyError = &nrpc.Error{
@@ -333,7 +333,7 @@ func (h *WebhookHandler) Handler(msg *nats.Msg) {
 		err = nil
 	}
 	if err != nil {
-		log.Println("WebhookHandler: Webhook handler failed to publish the response: %s", err)
+		log.Printf("WebhookHandler: Webhook handler failed to publish the response: %s", err)
 	}
 }
 
@@ -355,7 +355,7 @@ func NewWebhookClient(nc nrpc.NatsConn) *WebhookClient {
 	}
 }
 
-func (c *WebhookClient) Execute(req WebhookRequest) (resp Nil, err error) {
+func (c *WebhookClient) Execute(req WebhookData) (resp Nil, err error) {
 
 	subject := c.PkgSubject + "." + c.Subject + "." + "Execute"
 
@@ -374,7 +374,7 @@ type Client struct {
 	defaultTimeout time.Duration
 	pkgSubject string
 	RunLocal *RunLocalClient
-	Health *HealthClient
+	HealthCheck *HealthCheckClient
 	Webhook *WebhookClient
 }
 
@@ -386,7 +386,7 @@ func NewClient(nc nrpc.NatsConn) *Client {
 		pkgSubject: "github.xe.lokahi.admin",
 	}
 	c.RunLocal = NewRunLocalClient(nc)
-	c.Health = NewHealthClient(nc)
+	c.HealthCheck = NewHealthCheckClient(nc)
 	c.Webhook = NewWebhookClient(nc)
 	return &c
 }
@@ -396,8 +396,8 @@ func (c *Client) SetEncoding(encoding string) {
 	if c.RunLocal != nil {
 		c.RunLocal.Encoding = encoding
 	}
-	if c.Health != nil {
-		c.Health.Encoding = encoding
+	if c.HealthCheck != nil {
+		c.HealthCheck.Encoding = encoding
 	}
 	if c.Webhook != nil {
 		c.Webhook.Encoding = encoding
@@ -409,8 +409,8 @@ func (c *Client) SetTimeout(t time.Duration) {
 	if c.RunLocal != nil {
 		c.RunLocal.Timeout = t
 	}
-	if c.Health != nil {
-		c.Health.Timeout = t
+	if c.HealthCheck != nil {
+		c.HealthCheck.Timeout = t
 	}
 	if c.Webhook != nil {
 		c.Webhook.Timeout = t

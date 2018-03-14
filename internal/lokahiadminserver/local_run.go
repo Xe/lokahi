@@ -110,12 +110,13 @@ func (l *LocalRun) Minutely() error {
 
 			l.lastState[cid] = health.StatusCode
 
-			cdata, _ := proto.Marshal(c.AsProto())
-			data, _ := proto.Marshal(&lokahiadmin.WebhookData{
-				RunId:      result.Id,
-				CheckProto: cdata,
-				Health:     health,
-			})
+			wd := &lokahiadmin.WebhookData{
+				RunId:  result.Id,
+				Check:  lokahiadmin.CheckFromDatabaseCheck(c),
+				Health: health,
+			}
+
+			data, _ := proto.Marshal(wd)
 			err := l.Nc.Publish("webhook.egress", data)
 			if err != nil {
 				ln.Error(ctx, err, c)
@@ -129,8 +130,8 @@ func (l *LocalRun) Minutely() error {
 }
 
 // SendWebhook sends a webhook to a given target by check id.
-func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lokahiadmin.Health, done func()) {
-	cid := ck.Id
+func (l *LocalRun) SendWebhook(ctx context.Context, ck database.Check, health *lokahiadmin.Health, done func()) {
+	cid := ck.UUID
 
 	logErr := func(err error, cid, u string) {
 		ln.Error(ctx, err, ln.F{"check_id": cid, "url": u})
@@ -139,22 +140,22 @@ func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lo
 	defer done()
 
 	cs := &lokahi.CheckStatus{
-		Check: ck,
+		Check: ck.AsProto(),
 		LastResponseTimeNanoseconds: health.ResponseTimeNanoseconds,
 		RespStatusCode:              health.StatusCode,
 	}
 
 	data, err := proto.Marshal(cs)
 	if err != nil {
-		logErr(err, cid, ck.WebhookUrl)
+		logErr(err, cid, ck.WebhookURL)
 		return
 	}
 
 	buf := bytes.NewBuffer(data)
 
-	req, err := http.NewRequest("POST", ck.WebhookUrl, buf)
+	req, err := http.NewRequest("POST", ck.WebhookURL, buf)
 	if err != nil {
-		logErr(err, cid, ck.WebhookUrl)
+		logErr(err, cid, ck.WebhookURL)
 		return
 	}
 
@@ -166,12 +167,12 @@ func (l *LocalRun) SendWebhook(ctx context.Context, ck *lokahi.Check, health *lo
 
 	resp, err := l.HC.Do(req)
 	if err != nil {
-		logErr(err, cid, ck.WebhookUrl)
+		logErr(err, cid, ck.WebhookURL)
 		return
 	}
 
 	if s := resp.StatusCode / 100; s != 2 {
-		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookUrl, resp.StatusCode, s), cid, ck.WebhookUrl)
+		logErr(fmt.Errorf("lokahiadminserver: %s gave HTTP status %d(%d)", ck.WebhookURL, resp.StatusCode, s), cid, ck.WebhookURL)
 	}
 }
 
@@ -351,19 +352,4 @@ func (l *LocalRun) Run(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahi
 
 func (l *LocalRun) Checks(ctx context.Context, cids *lokahiadmin.CheckIDs) (*lokahiadmin.Run, error) {
 	return l.Run(ctx, cids)
-}
-
-func (l *LocalRun) Stats(ctx context.Context, _ *lokahiadmin.Nil) (*lokahiadmin.HistogramData, error) {
-	result := &lokahiadmin.HistogramData{
-		MaxNanoseconds:  l.timing.Max(),
-		MinNanoseconds:  l.timing.Min(),
-		MeanNanoseconds: int64(l.timing.Mean()),
-		Stddev:          int64(l.timing.StdDev()),
-		P50Nanoseconds:  int64(l.timing.ValueAtQuantile(50)),
-		P75Nanoseconds:  int64(l.timing.ValueAtQuantile(75)),
-		P95Nanoseconds:  int64(l.timing.ValueAtQuantile(95)),
-		P99Nanoseconds:  int64(l.timing.ValueAtQuantile(99)),
-	}
-
-	return result, nil
 }

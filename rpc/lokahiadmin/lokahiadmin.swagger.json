@@ -16,14 +16,14 @@
     "application/json"
   ],
   "paths": {
-    "/twirp/github.xe.lokahi.admin.Health/Run": {
+    "/twirp/github.xe.lokahi.admin.HealthCheck/Run": {
       "post": {
         "operationId": "Run",
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/adminServiceHealth"
+              "$ref": "#/definitions/adminHealth"
             }
           }
         },
@@ -38,7 +38,7 @@
           }
         ],
         "tags": [
-          "Health"
+          "HealthCheck"
         ]
       }
     },
@@ -85,7 +85,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/adminWebhookRequest"
+              "$ref": "#/definitions/adminWebhookData"
             }
           }
         ],
@@ -144,51 +144,7 @@
         }
       }
     },
-    "adminNil": {
-      "type": "object"
-    },
-    "adminRun": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "cids": {
-          "$ref": "#/definitions/adminCheckIDs"
-        },
-        "finished": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "results": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/adminServiceHealth"
-          }
-        },
-        "start_time_unix": {
-          "type": "string",
-          "format": "int64"
-        },
-        "elapsed_nanoseconds": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "adminRunRequest": {
-      "type": "object",
-      "properties": {
-        "check": {
-          "$ref": "#/definitions/adminCheck"
-        },
-        "run_id": {
-          "type": "string"
-        }
-      },
-      "description": "RunRequest is a request for a healthcheck being run."
-    },
-    "adminServiceHealth": {
+    "adminHealth": {
       "type": "object",
       "properties": {
         "url": {
@@ -214,7 +170,51 @@
         }
       }
     },
-    "adminWebhookRequest": {
+    "adminNil": {
+      "type": "object"
+    },
+    "adminRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "cids": {
+          "$ref": "#/definitions/adminCheckIDs"
+        },
+        "finished": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "results": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/adminHealth"
+          }
+        },
+        "start_time_unix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "elapsed_nanoseconds": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "adminRunRequest": {
+      "type": "object",
+      "properties": {
+        "check": {
+          "$ref": "#/definitions/adminCheck"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      },
+      "description": "RunRequest is a request for a healthcheck being run."
+    },
+    "adminWebhookData": {
       "type": "object",
       "properties": {
         "run_id": {
@@ -224,7 +224,7 @@
           "$ref": "#/definitions/adminCheck"
         },
         "health": {
-          "$ref": "#/definitions/adminServiceHealth"
+          "$ref": "#/definitions/adminHealth"
         }
       }
     }
