@@ -1,1 +1,3 @@
 _tools/* linguist-vendored
+*.pb.go linguist-vendored
+*.twirp.go linguist-vendored
