@@ -23,6 +23,7 @@ type apiCtx struct {
 	db *sqlx.DB
 
 	checks lokahi.Checks
+	err    error
 
 	// check to create on iCreateTheCheck
 	checkCreateOpts *lokahi.CreateOpts
@@ -62,6 +63,44 @@ func (a *apiCtx) aBaseStack() error {
 
 	a.ts = httptest.NewServer(mux)
 	a.checks = lokahi.NewChecksProtobufClient(a.ts.URL, &http.Client{})
+
+	return nil
+}
+
+func (a *apiCtx) thereWasNoError() error { return a.err }
+
+func (a *apiCtx) thereWasAnError() error {
+	if a.err == nil {
+		return errors.New("expected an error, but there wasn't one")
+	}
+
+	return nil
+}
+
+func (a *apiCtx) iTryToCreateTheCheck() error {
+	ck, err := a.checks.Create(context.Background(), a.checkCreateOpts)
+	a.rc = ck
+	a.err = err
+
+	return nil
+}
+
+func (a *apiCtx) iTryToDeleteTheCheck() error {
+	_, err := a.checks.Delete(context.Background(), &lokahi.CheckID{
+		Id: a.rc.Id,
+	})
+
+	a.err = err
+
+	return nil
+}
+
+func (a *apiCtx) iTryToFetchTheCheck() error {
+	ck, err := a.checks.Get(context.Background(), &lokahi.CheckID{
+		Id: a.rc.Id,
+	})
+	a.rc = ck
+	a.err = err
 
 	return nil
 }
@@ -111,13 +150,7 @@ func (a *apiCtx) iCantDeleteTheCheck() error {
 }
 
 func (a *apiCtx) theCheckCannotBeFetched() error {
-	_, err := a.checks.Get(context.Background(), &lokahi.CheckID{
-		Id: a.rc.Id,
-	})
-
-	if err == nil {
-		return errors.New("expected an error")
-	}
+	err := a.err
 
 	if e := err.Error(); !strings.Contains(e, sql.ErrNoRows.Error()) {
 		return err
@@ -200,6 +233,8 @@ func (a *apiCtx) tearEverythingDown() error {
 func FeatureContext(s *godog.Suite) {
 	a := &apiCtx{}
 
+	s.Step(`^there was an error$`, a.thereWasAnError)
+	s.Step(`^there was no error$`, a.thereWasNoError)
 	s.Step(`^a base stack$`, a.aBaseStack)
 	s.Step(`^I want to create a check$`, a.iWantToCreateACheck)
 	s.Step(`^a check monitoring url of "([^"]*)"$`, a.aCheckMonitoringUrlOf)
@@ -210,9 +245,10 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^the resulting check should have an ID$`, a.theResultingCheckShouldHaveAnID)
 	s.Step(`^tear everything down$`, a.tearEverythingDown)
 	s.Step(`^an example check$`, a.anExampleCheck)
-	s.Step(`^I can fetch the check$`, a.iCanFetchTheCheck)
-	s.Step(`^I delete the check$`, a.iDeleteTheCheck)
-	s.Step(`^I cant delete the check$`, a.iCantDeleteTheCheck)
-	s.Step(`^the check cannot be fetched$`, a.theCheckCannotBeFetched)
 	s.Step(`^a random check ID$`, a.aRandomCheckID)
+	s.Step(`^I try to create the check$`, a.iTryToCreateTheCheck)
+	s.Step(`^I try to delete the check$`, a.iTryToDeleteTheCheck)
+	s.Step(`^I try to fetch the check$`, a.iTryToFetchTheCheck)
+	s.Step(`^I can fetch the check$`, a.iCanFetchTheCheck)
+	s.Step(`^the check cannot be fetched$`, a.theCheckCannotBeFetched)
 }

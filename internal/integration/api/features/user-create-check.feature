@@ -8,6 +8,7 @@ Feature: A User can create a Check
     Given a check webhook url of "http://sample_hook:9001/twirp/github.xe.lokahi.Webhook/Handle"
     Given a check every of 60
     Given a check playbook url of "https://figureit.out"
-    When I create the check
+    When I try to create the check
+    Then there was no error
     Then the resulting check should have an ID
     Then tear everything down

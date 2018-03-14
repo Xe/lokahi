@@ -7,11 +7,13 @@ Feature: A User can delete a Check
 
   Scenario: normal check deletion
     As a User
-    When I delete the check
-    Then the check cannot be fetched
+    When I try to delete the check
+    Then there was no error
+    Then tear everything down
 
   Scenario: cannot delete a check that does not exist
     As a User
     Given a random check ID
-    When I cant delete the check
-    Then the check cannot be fetched
+    When I try to delete the check
+    Then there was an error
+    Then tear everything down
