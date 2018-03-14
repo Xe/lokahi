@@ -10,5 +10,5 @@ Feature: A User can create a Check
     Given a check playbook url of "https://figureit.out"
     When I try to create the check
     Then there was no error
-    Then the resulting check should have an ID
+    Then I can fetch the check
     Then tear everything down

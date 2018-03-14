@@ -25,7 +25,7 @@ type apiCtx struct {
 	checks lokahi.Checks
 	err    error
 
-	// check to create on iCreateTheCheck
+	checkListOpts   *lokahi.ListOpts
 	checkCreateOpts *lokahi.CreateOpts
 	// resulting check
 	rc *lokahi.Check
@@ -105,9 +105,16 @@ func (a *apiCtx) iTryToFetchTheCheck() error {
 	return nil
 }
 
+func (a *apiCtx) iTryToListChecks() error {
+	_, err := a.checks.List(context.Background(), a.checkListOpts)
+	a.err = err
+
+	return nil
+}
+
 func (a *apiCtx) anExampleCheck() error {
 	o := &lokahi.CreateOpts{
-		Url:         "https://google.com",
+		Url:         "https://google.com?" + uuid.New(),
 		WebhookUrl:  "http://sample_hook:9001/twirp/github.xe.lokahi.Webhook/Handle",
 		Every:       60,
 		PlaybookUrl: "https://figureit.out",
@@ -161,6 +168,24 @@ func (a *apiCtx) theCheckCannotBeFetched() error {
 
 func (a *apiCtx) aRandomCheckID() error {
 	a.rc.Id = uuid.New()
+
+	return nil
+}
+
+func (a *apiCtx) iWantToListChecks() error {
+	a.checkListOpts = &lokahi.ListOpts{}
+
+	return nil
+}
+
+func (a *apiCtx) checkListCountIs(count int) error {
+	a.checkListOpts.Count = int32(count)
+
+	return nil
+}
+
+func (a *apiCtx) checkListOffsetIs(offset int) error {
+	a.checkListOpts.Offset = int32(offset)
 
 	return nil
 }
@@ -251,4 +276,8 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I try to fetch the check$`, a.iTryToFetchTheCheck)
 	s.Step(`^I can fetch the check$`, a.iCanFetchTheCheck)
 	s.Step(`^the check cannot be fetched$`, a.theCheckCannotBeFetched)
+	s.Step(`^I want to list checks$`, a.iWantToListChecks)
+	s.Step(`^I try to list checks$`, a.iTryToListChecks)
+	s.Step(`^check list count is (\d+)$`, a.checkListCountIs)
+	s.Step(`^check list offset is (\d+)$`, a.checkListOffsetIs)
 }
