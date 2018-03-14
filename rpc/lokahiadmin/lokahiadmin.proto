@@ -6,14 +6,24 @@ option go_package = "lokahiadmin";
 
 service RunLocal {
   rpc Checks(CheckIDs) returns (Run);
-  rpc Stats(Nil) returns (HistogramData);
 }
 
 message CheckIDs {
   repeated string ids = 1;
 }
 
-message Health {
+// Health is a pseudo-service that runs HTTP health checks.
+service Health {
+  rpc Run(RunRequest) returns (ServiceHealth);
+}
+
+// RunRequest is a request for a healthcheck being run.
+message RunRequest {
+  Check check = 1;
+  string run_id = 2;
+}
+
+message ServiceHealth {
     string url = 1;
     int64 response_time_nanoseconds = 2;
     int32 status_code = 3;
@@ -26,47 +36,34 @@ message Run {
   string id = 1;
   CheckIDs cids = 2;
   bool finished = 3;
-  map<string, Health> results = 4;
+  map<string, ServiceHealth> results = 4;
   int64 start_time_unix = 5;
   int64 elapsed_nanoseconds = 6;
 }
 
 message Nil{}
 
-// HistogramData contains information from the HDR histogram maintained for
-// each check.
-message HistogramData {
-  // max_nanoseconds is the maximum http web response time in nanoseconds.
-  int64 max_nanoseconds = 1;
-
-  // min_nanoseconds is the minimum http web response time in nanoseconds.
-  int64 min_nanoseconds = 2;
-
-  // mean_nanoseconds is the mean http web response time in nanoseconds.
-  int64 mean_nanoseconds = 3;
-
-  // stddev is the standard deviation from the mean.
-  int64 stddev = 4;
-
-  // p50_nanoseconds is the 50th percentile of the http web response times in
-  // nanoseconds.
-  int64 p50_nanoseconds = 5;
-
-  // p75_nanoseconds is the 75th percentile of the http web response times in
-  // nanoseconds.
-  int64 p75_nanoseconds = 6;
-
-  // p95_nanoseconds is the 95th percentile of the http web response times in
-  // nanoseconds.
-  int64 p95_nanoseconds = 7;
-
-  // p99_nanoseconds is the 95th percentile of the http web response times in
-  // nanoseconds.
-  int64 p99_nanoseconds = 8;
+// Check is the database check structure.
+// https://github.com/Xe/lokahi/blob/master/internal/database/check.go
+message Check {
+  int32 id = 1;
+  string uuid = 2;
+  int64 created_at_unix = 3;
+  int64 edited_at_unix = 4;
+  string url = 5;
+  string webhook_url = 6;
+  int32 every = 7;
+  string playbook_url = 8;
+  string state = 9;
 }
 
-message WebhookData {
+message WebhookRequest {
   string run_id = 1;
-  bytes check_proto = 2;
-  Health health = 3;
+  Check check = 2;
+  ServiceHealth health = 3;
+}
+
+// Webhook executes HTTP webhooks. This is expected to be run asynchronously.
+service Webhook {
+  rpc Execute(WebhookRequest) returns (Nil);
 }
