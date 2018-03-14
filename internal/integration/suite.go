@@ -31,7 +31,21 @@
 //     }
 //
 // And then run `$ mkdir component/features`. Create `component_test.go` with the
-// following in it: TODO: Finish this, block review on this
+// following in it:
+//
+//     package component
+//
+//     type component struct {
+//       *integration.Suite
+//     }
+//
+//     func FeatureContext(s *godog.Suite) {
+//       c := &component{
+//         Suite: &integration.Suite{},
+//       }
+//
+//       c.Register(s)
+//     }
 package integration
 
 import (
@@ -40,7 +54,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/Xe/lokahi/internal/database"
@@ -65,10 +78,7 @@ type Suite struct {
 
 	ClientChecks lokahi.Checks
 
-	// where the fun begins
-	lock sync.Mutex
-	data map[string]interface{} // contextual data for each test run
-	err  error
+	err error
 }
 
 // Setup reads configuration information from the environment and then uses
@@ -121,7 +131,6 @@ func (s *Suite) Setup() error {
 	}, nil))
 
 	s.TS = httptest.NewServer(s.Mux)
-	s.data = map[string]interface{}{}
 	s.ClientChecks = lokahi.NewChecksProtobufClient(s.TS.URL, &http.Client{})
 
 	return nil
@@ -180,7 +189,7 @@ func (s *Suite) SetErr(err error) {
 //
 // This doesn't have any branches because the zero value for any go value boxed
 // in an interface is nil.
-func (s *Suite) GetErr() error {
+func (s Suite) GetErr() error {
 	return s.err
 }
 
@@ -202,7 +211,7 @@ func (s *Suite) GetErr() error {
 //
 //       s.Step(`^there was an error$`, val.Suite.WantAnError)
 //     }
-func (s *Suite) WantAnError() error {
+func (s Suite) WantAnError() error {
 	if s.err == nil {
 		return errors.New("expected an error, but there wasn't one")
 	}

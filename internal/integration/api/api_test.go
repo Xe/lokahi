@@ -4,123 +4,69 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"net/http"
-	"net/http/httptest"
-	"os"
+	"log"
 	"strings"
 
 	"github.com/DATA-DOG/godog"
-	"github.com/Xe/lokahi/internal/database"
-	"github.com/Xe/lokahi/internal/lokahiserver"
+	"github.com/Xe/lokahi/internal/integration"
 	"github.com/Xe/lokahi/rpc/lokahi"
 	"github.com/Xe/uuid"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
-type apiCtx struct {
-	ts *httptest.Server
-	db *sqlx.DB
-
-	checks lokahi.Checks
-	err    error
+type api struct {
+	*integration.Suite
 
 	checkListOpts   *lokahi.ListOpts
 	checkCreateOpts *lokahi.CreateOpts
-	// resulting check
-	rc *lokahi.Check
+	rc              *lokahi.Check
 }
 
-func (a *apiCtx) aBaseStack() error {
-	durl := os.Getenv("DATABASE_URL")
-	if durl == "" {
-		return errors.New("no DATABASE_URL")
-	}
-
-	err := database.Destroy(durl)
-	if err != nil && !strings.Contains(err.Error(), "no change") {
-		return err
-	}
-
-	err = database.Migrate(durl)
-	if err != nil {
-		return err
-	}
-
-	db, err := sqlx.Open("postgres", durl)
-	if err != nil {
-		return err
-	}
-
-	a.db = db
-
-	cks := &lokahiserver.Checks{
-		DB: database.ChecksPostgres(db),
-	}
-
-	mux := http.NewServeMux()
-	mux.Handle(lokahi.ChecksPathPrefix, lokahi.NewChecksServer(cks, nil))
-
-	a.ts = httptest.NewServer(mux)
-	a.checks = lokahi.NewChecksProtobufClient(a.ts.URL, &http.Client{})
-
-	return nil
-}
-
-func (a *apiCtx) thereWasNoError() error { return a.err }
-
-func (a *apiCtx) thereWasAnError() error {
-	if a.err == nil {
-		return errors.New("expected an error, but there wasn't one")
-	}
-
-	return nil
-}
-
-func (a *apiCtx) iTryToCreateTheCheck() error {
-	ck, err := a.checks.Create(context.Background(), a.checkCreateOpts)
+func (a *api) iTryToCreateTheCheck() error {
+	ck, err := a.ClientChecks.Create(context.Background(), a.checkCreateOpts)
 	a.rc = ck
-	a.err = err
+	a.SetErr(err)
 
 	return nil
 }
 
-func (a *apiCtx) iTryToDeleteTheCheck() error {
-	_, err := a.checks.Delete(context.Background(), &lokahi.CheckID{
+func (a *api) iTryToDeleteTheCheck() error {
+	log.Printf("deleting check %s", a.rc.Id)
+	_, err := a.ClientChecks.Delete(context.Background(), &lokahi.CheckID{
 		Id: a.rc.Id,
 	})
 
-	a.err = err
+	a.SetErr(err)
 
 	return nil
 }
 
-func (a *apiCtx) iTryToFetchTheCheck() error {
-	ck, err := a.checks.Get(context.Background(), &lokahi.CheckID{
+func (a *api) iTryToFetchTheCheck() error {
+	ck, err := a.ClientChecks.Get(context.Background(), &lokahi.CheckID{
 		Id: a.rc.Id,
 	})
 	a.rc = ck
-	a.err = err
+	a.SetErr(err)
 
 	return nil
 }
 
-func (a *apiCtx) iTryToListChecks() error {
-	_, err := a.checks.List(context.Background(), a.checkListOpts)
-	a.err = err
+func (a *api) iTryToListChecks() error {
+	_, err := a.ClientChecks.List(context.Background(), a.checkListOpts)
+	a.SetErr(err)
 
 	return nil
 }
 
-func (a *apiCtx) iTryToPutTheCheck() error {
-	ck, err := a.checks.Put(context.Background(), a.rc)
+func (a *api) iTryToPutTheCheck() error {
+	ck, err := a.Suite.ClientChecks.Put(context.Background(), a.rc)
 	a.rc = ck
-	a.err = err
+	a.SetErr(err)
 
 	return nil
 }
 
-func (a *apiCtx) anExampleCheck() error {
+func (a *api) anExampleCheck() error {
 	o := &lokahi.CreateOpts{
 		Url:         "https://google.com?" + uuid.New(),
 		WebhookUrl:  "http://sample_hook:9001/twirp/github.xe.lokahi.Webhook/Handle",
@@ -128,7 +74,7 @@ func (a *apiCtx) anExampleCheck() error {
 		PlaybookUrl: "https://figureit.out",
 	}
 
-	ck, err := a.checks.Create(context.Background(), o)
+	ck, err := a.Suite.ClientChecks.Create(context.Background(), o)
 	if err != nil {
 		return err
 	}
@@ -138,24 +84,8 @@ func (a *apiCtx) anExampleCheck() error {
 	return nil
 }
 
-func (a *apiCtx) iCanFetchTheCheck() error {
-	_, err := a.checks.Get(context.Background(), &lokahi.CheckID{
-		Id: a.rc.Id,
-	})
-
-	return err
-}
-
-func (a *apiCtx) iDeleteTheCheck() error {
-	_, err := a.checks.Delete(context.Background(), &lokahi.CheckID{
-		Id: a.rc.Id,
-	})
-
-	return err
-}
-
-func (a *apiCtx) iCantDeleteTheCheck() error {
-	err := a.iDeleteTheCheck()
+func (a *api) theCheckCannotBeFetched() error {
+	err := a.GetErr()
 
 	if e := err.Error(); !strings.Contains(e, sql.ErrNoRows.Error()) {
 		return err
@@ -164,72 +94,62 @@ func (a *apiCtx) iCantDeleteTheCheck() error {
 	return nil
 }
 
-func (a *apiCtx) theCheckCannotBeFetched() error {
-	err := a.err
-
-	if e := err.Error(); !strings.Contains(e, sql.ErrNoRows.Error()) {
-		return err
-	}
-
-	return nil
-}
-
-func (a *apiCtx) aRandomCheckID() error {
+func (a *api) aRandomCheckID() error {
 	a.rc.Id = uuid.New()
 
 	return nil
 }
 
-func (a *apiCtx) iWantToListChecks() error {
+func (a *api) iWantToListChecks() error {
 	a.checkListOpts = &lokahi.ListOpts{}
 
 	return nil
 }
 
-func (a *apiCtx) checkListCountIs(count int) error {
+func (a *api) checkListCountIs(count int) error {
 	a.checkListOpts.Count = int32(count)
 
 	return nil
 }
 
-func (a *apiCtx) checkListOffsetIs(offset int) error {
+func (a *api) checkListOffsetIs(offset int) error {
 	a.checkListOpts.Offset = int32(offset)
 
 	return nil
 }
 
-func (a *apiCtx) iWantToCreateACheck() error {
+func (a *api) iWantToCreateACheck() error {
 	a.checkCreateOpts = &lokahi.CreateOpts{}
 
 	return nil
 }
 
-func (a *apiCtx) aCheckMonitoringUrlOf(curl string) error {
+func (a *api) aCheckMonitoringUrlOf(curl string) error {
 	a.checkCreateOpts.Url = curl
 
 	return nil
 }
 
-func (a *apiCtx) aCheckWebhookUrlOf(wurl string) error {
+func (a *api) aCheckWebhookUrlOf(wurl string) error {
 	a.checkCreateOpts.WebhookUrl = wurl
 
 	return nil
 }
 
-func (a *apiCtx) aCheckEveryOf(every int) error {
+func (a *api) aCheckEveryOf(every int) error {
 	a.checkCreateOpts.Every = int32(every)
 
 	return nil
 }
 
-func (a *apiCtx) aCheckPlaybookUrlOf(purl string) error {
+func (a *api) aCheckPlaybookUrlOf(purl string) error {
 	a.checkCreateOpts.PlaybookUrl = purl
 
 	return nil
 }
 
-func (a *apiCtx) iCreateTheCheck() error {
-	ck, err := a.checks.Create(context.Background(), a.checkCreateOpts)
+func (a *api) iCreateTheCheck() error {
+	ck, err := a.ClientChecks.Create(context.Background(), a.checkCreateOpts)
 	if err != nil {
 		return err
 	}
@@ -239,13 +159,13 @@ func (a *apiCtx) iCreateTheCheck() error {
 	return nil
 }
 
-func (a *apiCtx) aRandomUrlInTheLastCheck() error {
+func (a *api) aRandomUrlInTheLastCheck() error {
 	a.rc.Url = "https://google.com?" + uuid.New()
 
 	return nil
 }
 
-func (a *apiCtx) theResultingCheckShouldHaveAnID() error {
+func (a *api) theResultingCheckShouldHaveAnID() error {
 	if a.rc.Id == "" {
 		return errors.New("the check doesn't have an ID")
 	}
@@ -253,42 +173,25 @@ func (a *apiCtx) theResultingCheckShouldHaveAnID() error {
 	return nil
 }
 
-func (a *apiCtx) tearEverythingDown() error {
-	err := a.db.Close()
-	if err != nil {
-		return err
-	}
-
-	a.ts.Close()
-
-	err = database.Destroy(os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func FeatureContext(s *godog.Suite) {
-	a := &apiCtx{}
+	a := &api{
+		Suite: &integration.Suite{},
+	}
 
-	s.Step(`^there was an error$`, a.thereWasAnError)
-	s.Step(`^there was no error$`, a.thereWasNoError)
-	s.Step(`^a base stack$`, a.aBaseStack)
+	a.Register(s)
+
 	s.Step(`^I want to create a check$`, a.iWantToCreateACheck)
 	s.Step(`^a check monitoring url of "([^"]*)"$`, a.aCheckMonitoringUrlOf)
 	s.Step(`^a check webhook url of "([^"]*)"$`, a.aCheckWebhookUrlOf)
 	s.Step(`^a check every of (\d+)$`, a.aCheckEveryOf)
 	s.Step(`^a check playbook url of "([^"]*)"$`, a.aCheckPlaybookUrlOf)
-	s.Step(`^I create the check$`, a.iCreateTheCheck)
-	s.Step(`^the resulting check should have an ID$`, a.theResultingCheckShouldHaveAnID)
-	s.Step(`^tear everything down$`, a.tearEverythingDown)
-	s.Step(`^an example check$`, a.anExampleCheck)
-	s.Step(`^a random check ID$`, a.aRandomCheckID)
 	s.Step(`^I try to create the check$`, a.iTryToCreateTheCheck)
+	s.Step(`^I can fetch the check$`, a.iTryToFetchTheCheck)
+	s.Step(`^an example check$`, a.anExampleCheck)
 	s.Step(`^I try to delete the check$`, a.iTryToDeleteTheCheck)
+	s.Step(`^a random check ID$`, a.aRandomCheckID)
 	s.Step(`^I try to fetch the check$`, a.iTryToFetchTheCheck)
-	s.Step(`^I can fetch the check$`, a.iCanFetchTheCheck)
+	s.Step(`^the resulting check should have an ID$`, a.theResultingCheckShouldHaveAnID)
 	s.Step(`^the check cannot be fetched$`, a.theCheckCannotBeFetched)
 	s.Step(`^I want to list checks$`, a.iWantToListChecks)
 	s.Step(`^I try to list checks$`, a.iTryToListChecks)
