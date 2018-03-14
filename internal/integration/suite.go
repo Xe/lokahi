@@ -46,6 +46,20 @@
 //
 //       c.Register(s)
 //     }
+//
+// Then create features in component/features/*.feature, eg:
+//
+//     # user-creates-task.feature
+//     Feature: A user can Create a Task
+//
+//       Background:
+//         Given a base stack
+//
+//       Scenario:
+//         As a User
+//         When I try to create an example Task
+//         Then there was no error
+//         Then tear everything down
 package integration
 
 import (
