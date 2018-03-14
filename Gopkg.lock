@@ -58,6 +58,7 @@
   packages = [
     "jsonpb",
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes/struct"
   ]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
@@ -180,6 +181,12 @@
   version = "v0.1.1"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/rapidloop/nrpc"
+  packages = ["."]
+  revision = "13666f5621442975e1b468b9c243a7db7390f740"
+
+[[projects]]
   name = "github.com/robfig/cron"
   packages = ["."]
   revision = "b024fc5ea0e34bc3f83d9941c8d60b0622bfaca4"
@@ -284,6 +291,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "33faafa9b7a41e326f9d0ae3ef122e97b1900947c00a900b40d9ddc29016b998"
+  inputs-digest = "0b6e1eef731ccb38895a9e8cfb46935e8d18c8f0bb9758b055109ae377118436"
   solver-name = "gps-cdcl"
   solver-version = 1

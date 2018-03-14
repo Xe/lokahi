@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+import "nrpc.proto";
+
+message DummyMessage {
+    string foobar = 1;
+}

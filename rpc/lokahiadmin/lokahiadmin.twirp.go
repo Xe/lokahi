@@ -38,8 +38,6 @@ import url "net/url"
 
 type RunLocal interface {
 	Checks(context.Context, *CheckIDs) (*Run, error)
-
-	Stats(context.Context, *Nil) (*HistogramData, error)
 }
 
 // ========================
@@ -48,16 +46,15 @@ type RunLocal interface {
 
 type runLocalProtobufClient struct {
 	client HTTPClient
-	urls   [2]string
+	urls   [1]string
 }
 
 // NewRunLocalProtobufClient creates a Protobuf client that implements the RunLocal interface.
 // It communicates using Protobuf and can be configured with a custom HTTPClient.
 func NewRunLocalProtobufClient(addr string, client HTTPClient) RunLocal {
 	prefix := urlBase(addr) + RunLocalPathPrefix
-	urls := [2]string{
+	urls := [1]string{
 		prefix + "Checks",
-		prefix + "Stats",
 	}
 	if httpClient, ok := client.(*http.Client); ok {
 		return &runLocalProtobufClient{
@@ -80,31 +77,21 @@ func (c *runLocalProtobufClient) Checks(ctx context.Context, in *CheckIDs) (*Run
 	return out, err
 }
 
-func (c *runLocalProtobufClient) Stats(ctx context.Context, in *Nil) (*HistogramData, error) {
-	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
-	ctx = ctxsetters.WithServiceName(ctx, "RunLocal")
-	ctx = ctxsetters.WithMethodName(ctx, "Stats")
-	out := new(HistogramData)
-	err := doProtobufRequest(ctx, c.client, c.urls[1], in, out)
-	return out, err
-}
-
 // ====================
 // RunLocal JSON Client
 // ====================
 
 type runLocalJSONClient struct {
 	client HTTPClient
-	urls   [2]string
+	urls   [1]string
 }
 
 // NewRunLocalJSONClient creates a JSON client that implements the RunLocal interface.
 // It communicates using JSON and can be configured with a custom HTTPClient.
 func NewRunLocalJSONClient(addr string, client HTTPClient) RunLocal {
 	prefix := urlBase(addr) + RunLocalPathPrefix
-	urls := [2]string{
+	urls := [1]string{
 		prefix + "Checks",
-		prefix + "Stats",
 	}
 	if httpClient, ok := client.(*http.Client); ok {
 		return &runLocalJSONClient{
@@ -124,15 +111,6 @@ func (c *runLocalJSONClient) Checks(ctx context.Context, in *CheckIDs) (*Run, er
 	ctx = ctxsetters.WithMethodName(ctx, "Checks")
 	out := new(Run)
 	err := doJSONRequest(ctx, c.client, c.urls[0], in, out)
-	return out, err
-}
-
-func (c *runLocalJSONClient) Stats(ctx context.Context, in *Nil) (*HistogramData, error) {
-	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
-	ctx = ctxsetters.WithServiceName(ctx, "RunLocal")
-	ctx = ctxsetters.WithMethodName(ctx, "Stats")
-	out := new(HistogramData)
-	err := doJSONRequest(ctx, c.client, c.urls[1], in, out)
 	return out, err
 }
 
@@ -186,9 +164,6 @@ func (s *runLocalServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) 
 	switch req.URL.Path {
 	case "/twirp/github.xe.lokahi.admin.RunLocal/Checks":
 		s.serveChecks(ctx, resp, req)
-		return
-	case "/twirp/github.xe.lokahi.admin.RunLocal/Stats":
-		s.serveStats(ctx, resp, req)
 		return
 	default:
 		msg := fmt.Sprintf("no handler for path %q", req.URL.Path)
@@ -338,7 +313,157 @@ func (s *runLocalServer) serveChecksProtobuf(ctx context.Context, resp http.Resp
 	callResponseSent(ctx, s.hooks)
 }
 
-func (s *runLocalServer) serveStats(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+func (s *runLocalServer) ServiceDescriptor() ([]byte, int) {
+	return twirpFileDescriptor0, 0
+}
+
+func (s *runLocalServer) ProtocGenTwirpVersion() string {
+	return "v5.2.0"
+}
+
+// =====================
+// HealthCheck Interface
+// =====================
+
+// HealthCheck is a pseudo-service that runs HTTP health checks.
+type HealthCheck interface {
+	Run(context.Context, *RunRequest) (*Health, error)
+}
+
+// ===========================
+// HealthCheck Protobuf Client
+// ===========================
+
+type healthCheckProtobufClient struct {
+	client HTTPClient
+	urls   [1]string
+}
+
+// NewHealthCheckProtobufClient creates a Protobuf client that implements the HealthCheck interface.
+// It communicates using Protobuf and can be configured with a custom HTTPClient.
+func NewHealthCheckProtobufClient(addr string, client HTTPClient) HealthCheck {
+	prefix := urlBase(addr) + HealthCheckPathPrefix
+	urls := [1]string{
+		prefix + "Run",
+	}
+	if httpClient, ok := client.(*http.Client); ok {
+		return &healthCheckProtobufClient{
+			client: withoutRedirects(httpClient),
+			urls:   urls,
+		}
+	}
+	return &healthCheckProtobufClient{
+		client: client,
+		urls:   urls,
+	}
+}
+
+func (c *healthCheckProtobufClient) Run(ctx context.Context, in *RunRequest) (*Health, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
+	ctx = ctxsetters.WithServiceName(ctx, "HealthCheck")
+	ctx = ctxsetters.WithMethodName(ctx, "Run")
+	out := new(Health)
+	err := doProtobufRequest(ctx, c.client, c.urls[0], in, out)
+	return out, err
+}
+
+// =======================
+// HealthCheck JSON Client
+// =======================
+
+type healthCheckJSONClient struct {
+	client HTTPClient
+	urls   [1]string
+}
+
+// NewHealthCheckJSONClient creates a JSON client that implements the HealthCheck interface.
+// It communicates using JSON and can be configured with a custom HTTPClient.
+func NewHealthCheckJSONClient(addr string, client HTTPClient) HealthCheck {
+	prefix := urlBase(addr) + HealthCheckPathPrefix
+	urls := [1]string{
+		prefix + "Run",
+	}
+	if httpClient, ok := client.(*http.Client); ok {
+		return &healthCheckJSONClient{
+			client: withoutRedirects(httpClient),
+			urls:   urls,
+		}
+	}
+	return &healthCheckJSONClient{
+		client: client,
+		urls:   urls,
+	}
+}
+
+func (c *healthCheckJSONClient) Run(ctx context.Context, in *RunRequest) (*Health, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
+	ctx = ctxsetters.WithServiceName(ctx, "HealthCheck")
+	ctx = ctxsetters.WithMethodName(ctx, "Run")
+	out := new(Health)
+	err := doJSONRequest(ctx, c.client, c.urls[0], in, out)
+	return out, err
+}
+
+// ==========================
+// HealthCheck Server Handler
+// ==========================
+
+type healthCheckServer struct {
+	HealthCheck
+	hooks *twirp.ServerHooks
+}
+
+func NewHealthCheckServer(svc HealthCheck, hooks *twirp.ServerHooks) TwirpServer {
+	return &healthCheckServer{
+		HealthCheck: svc,
+		hooks:       hooks,
+	}
+}
+
+// writeError writes an HTTP response with a valid Twirp error format, and triggers hooks.
+// If err is not a twirp.Error, it will get wrapped with twirp.InternalErrorWith(err)
+func (s *healthCheckServer) writeError(ctx context.Context, resp http.ResponseWriter, err error) {
+	writeError(ctx, resp, err, s.hooks)
+}
+
+// HealthCheckPathPrefix is used for all URL paths on a twirp HealthCheck server.
+// Requests are always: POST HealthCheckPathPrefix/method
+// It can be used in an HTTP mux to route twirp requests along with non-twirp requests on other routes.
+const HealthCheckPathPrefix = "/twirp/github.xe.lokahi.admin.HealthCheck/"
+
+func (s *healthCheckServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
+	ctx = ctxsetters.WithServiceName(ctx, "HealthCheck")
+	ctx = ctxsetters.WithResponseWriter(ctx, resp)
+
+	var err error
+	ctx, err = callRequestReceived(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	if req.Method != "POST" {
+		msg := fmt.Sprintf("unsupported method %q (only POST is allowed)", req.Method)
+		err = badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	switch req.URL.Path {
+	case "/twirp/github.xe.lokahi.admin.HealthCheck/Run":
+		s.serveRun(ctx, resp, req)
+		return
+	default:
+		msg := fmt.Sprintf("no handler for path %q", req.URL.Path)
+		err = badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, err)
+		return
+	}
+}
+
+func (s *healthCheckServer) serveRun(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
 	header := req.Header.Get("Content-Type")
 	i := strings.Index(header, ";")
 	if i == -1 {
@@ -346,9 +471,9 @@ func (s *runLocalServer) serveStats(ctx context.Context, resp http.ResponseWrite
 	}
 	switch strings.TrimSpace(strings.ToLower(header[:i])) {
 	case "application/json":
-		s.serveStatsJSON(ctx, resp, req)
+		s.serveRunJSON(ctx, resp, req)
 	case "application/protobuf":
-		s.serveStatsProtobuf(ctx, resp, req)
+		s.serveRunProtobuf(ctx, resp, req)
 	default:
 		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
 		twerr := badRouteError(msg, req.Method, req.URL.Path)
@@ -356,9 +481,9 @@ func (s *runLocalServer) serveStats(ctx context.Context, resp http.ResponseWrite
 	}
 }
 
-func (s *runLocalServer) serveStatsJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+func (s *healthCheckServer) serveRunJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
 	var err error
-	ctx = ctxsetters.WithMethodName(ctx, "Stats")
+	ctx = ctxsetters.WithMethodName(ctx, "Run")
 	ctx, err = callRequestRouted(ctx, s.hooks)
 	if err != nil {
 		s.writeError(ctx, resp, err)
@@ -366,7 +491,7 @@ func (s *runLocalServer) serveStatsJSON(ctx context.Context, resp http.ResponseW
 	}
 
 	defer closebody(req.Body)
-	reqContent := new(Nil)
+	reqContent := new(RunRequest)
 	unmarshaler := jsonpb.Unmarshaler{AllowUnknownFields: true}
 	if err = unmarshaler.Unmarshal(req.Body, reqContent); err != nil {
 		err = wrapErr(err, "failed to parse request json")
@@ -375,7 +500,7 @@ func (s *runLocalServer) serveStatsJSON(ctx context.Context, resp http.ResponseW
 	}
 
 	// Call service method
-	var respContent *HistogramData
+	var respContent *Health
 	func() {
 		defer func() {
 			// In case of a panic, serve a 500 error and then panic.
@@ -384,7 +509,7 @@ func (s *runLocalServer) serveStatsJSON(ctx context.Context, resp http.ResponseW
 				panic(r)
 			}
 		}()
-		respContent, err = s.Stats(ctx, reqContent)
+		respContent, err = s.Run(ctx, reqContent)
 	}()
 
 	if err != nil {
@@ -392,7 +517,7 @@ func (s *runLocalServer) serveStatsJSON(ctx context.Context, resp http.ResponseW
 		return
 	}
 	if respContent == nil {
-		s.writeError(ctx, resp, twirp.InternalError("received a nil *HistogramData and nil error while calling Stats. nil responses are not supported"))
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *Health and nil error while calling Run. nil responses are not supported"))
 		return
 	}
 
@@ -415,9 +540,9 @@ func (s *runLocalServer) serveStatsJSON(ctx context.Context, resp http.ResponseW
 	callResponseSent(ctx, s.hooks)
 }
 
-func (s *runLocalServer) serveStatsProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+func (s *healthCheckServer) serveRunProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
 	var err error
-	ctx = ctxsetters.WithMethodName(ctx, "Stats")
+	ctx = ctxsetters.WithMethodName(ctx, "Run")
 	ctx, err = callRequestRouted(ctx, s.hooks)
 	if err != nil {
 		s.writeError(ctx, resp, err)
@@ -431,7 +556,7 @@ func (s *runLocalServer) serveStatsProtobuf(ctx context.Context, resp http.Respo
 		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
 		return
 	}
-	reqContent := new(Nil)
+	reqContent := new(RunRequest)
 	if err = proto.Unmarshal(buf, reqContent); err != nil {
 		err = wrapErr(err, "failed to parse request proto")
 		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
@@ -439,7 +564,7 @@ func (s *runLocalServer) serveStatsProtobuf(ctx context.Context, resp http.Respo
 	}
 
 	// Call service method
-	var respContent *HistogramData
+	var respContent *Health
 	func() {
 		defer func() {
 			// In case of a panic, serve a 500 error and then panic.
@@ -448,7 +573,7 @@ func (s *runLocalServer) serveStatsProtobuf(ctx context.Context, resp http.Respo
 				panic(r)
 			}
 		}()
-		respContent, err = s.Stats(ctx, reqContent)
+		respContent, err = s.Run(ctx, reqContent)
 	}()
 
 	if err != nil {
@@ -456,7 +581,7 @@ func (s *runLocalServer) serveStatsProtobuf(ctx context.Context, resp http.Respo
 		return
 	}
 	if respContent == nil {
-		s.writeError(ctx, resp, twirp.InternalError("received a nil *HistogramData and nil error while calling Stats. nil responses are not supported"))
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *Health and nil error while calling Run. nil responses are not supported"))
 		return
 	}
 
@@ -478,11 +603,301 @@ func (s *runLocalServer) serveStatsProtobuf(ctx context.Context, resp http.Respo
 	callResponseSent(ctx, s.hooks)
 }
 
-func (s *runLocalServer) ServiceDescriptor() ([]byte, int) {
-	return twirpFileDescriptor0, 0
+func (s *healthCheckServer) ServiceDescriptor() ([]byte, int) {
+	return twirpFileDescriptor0, 1
 }
 
-func (s *runLocalServer) ProtocGenTwirpVersion() string {
+func (s *healthCheckServer) ProtocGenTwirpVersion() string {
+	return "v5.2.0"
+}
+
+// =================
+// Webhook Interface
+// =================
+
+// Webhook executes HTTP webhooks. This is expected to be run asynchronously.
+type Webhook interface {
+	Execute(context.Context, *WebhookData) (*Nil, error)
+}
+
+// =======================
+// Webhook Protobuf Client
+// =======================
+
+type webhookProtobufClient struct {
+	client HTTPClient
+	urls   [1]string
+}
+
+// NewWebhookProtobufClient creates a Protobuf client that implements the Webhook interface.
+// It communicates using Protobuf and can be configured with a custom HTTPClient.
+func NewWebhookProtobufClient(addr string, client HTTPClient) Webhook {
+	prefix := urlBase(addr) + WebhookPathPrefix
+	urls := [1]string{
+		prefix + "Execute",
+	}
+	if httpClient, ok := client.(*http.Client); ok {
+		return &webhookProtobufClient{
+			client: withoutRedirects(httpClient),
+			urls:   urls,
+		}
+	}
+	return &webhookProtobufClient{
+		client: client,
+		urls:   urls,
+	}
+}
+
+func (c *webhookProtobufClient) Execute(ctx context.Context, in *WebhookData) (*Nil, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
+	ctx = ctxsetters.WithServiceName(ctx, "Webhook")
+	ctx = ctxsetters.WithMethodName(ctx, "Execute")
+	out := new(Nil)
+	err := doProtobufRequest(ctx, c.client, c.urls[0], in, out)
+	return out, err
+}
+
+// ===================
+// Webhook JSON Client
+// ===================
+
+type webhookJSONClient struct {
+	client HTTPClient
+	urls   [1]string
+}
+
+// NewWebhookJSONClient creates a JSON client that implements the Webhook interface.
+// It communicates using JSON and can be configured with a custom HTTPClient.
+func NewWebhookJSONClient(addr string, client HTTPClient) Webhook {
+	prefix := urlBase(addr) + WebhookPathPrefix
+	urls := [1]string{
+		prefix + "Execute",
+	}
+	if httpClient, ok := client.(*http.Client); ok {
+		return &webhookJSONClient{
+			client: withoutRedirects(httpClient),
+			urls:   urls,
+		}
+	}
+	return &webhookJSONClient{
+		client: client,
+		urls:   urls,
+	}
+}
+
+func (c *webhookJSONClient) Execute(ctx context.Context, in *WebhookData) (*Nil, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
+	ctx = ctxsetters.WithServiceName(ctx, "Webhook")
+	ctx = ctxsetters.WithMethodName(ctx, "Execute")
+	out := new(Nil)
+	err := doJSONRequest(ctx, c.client, c.urls[0], in, out)
+	return out, err
+}
+
+// ======================
+// Webhook Server Handler
+// ======================
+
+type webhookServer struct {
+	Webhook
+	hooks *twirp.ServerHooks
+}
+
+func NewWebhookServer(svc Webhook, hooks *twirp.ServerHooks) TwirpServer {
+	return &webhookServer{
+		Webhook: svc,
+		hooks:   hooks,
+	}
+}
+
+// writeError writes an HTTP response with a valid Twirp error format, and triggers hooks.
+// If err is not a twirp.Error, it will get wrapped with twirp.InternalErrorWith(err)
+func (s *webhookServer) writeError(ctx context.Context, resp http.ResponseWriter, err error) {
+	writeError(ctx, resp, err, s.hooks)
+}
+
+// WebhookPathPrefix is used for all URL paths on a twirp Webhook server.
+// Requests are always: POST WebhookPathPrefix/method
+// It can be used in an HTTP mux to route twirp requests along with non-twirp requests on other routes.
+const WebhookPathPrefix = "/twirp/github.xe.lokahi.admin.Webhook/"
+
+func (s *webhookServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	ctx = ctxsetters.WithPackageName(ctx, "github.xe.lokahi.admin")
+	ctx = ctxsetters.WithServiceName(ctx, "Webhook")
+	ctx = ctxsetters.WithResponseWriter(ctx, resp)
+
+	var err error
+	ctx, err = callRequestReceived(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	if req.Method != "POST" {
+		msg := fmt.Sprintf("unsupported method %q (only POST is allowed)", req.Method)
+		err = badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	switch req.URL.Path {
+	case "/twirp/github.xe.lokahi.admin.Webhook/Execute":
+		s.serveExecute(ctx, resp, req)
+		return
+	default:
+		msg := fmt.Sprintf("no handler for path %q", req.URL.Path)
+		err = badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, err)
+		return
+	}
+}
+
+func (s *webhookServer) serveExecute(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveExecuteJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveExecuteProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *webhookServer) serveExecuteJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "Execute")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	defer closebody(req.Body)
+	reqContent := new(WebhookData)
+	unmarshaler := jsonpb.Unmarshaler{AllowUnknownFields: true}
+	if err = unmarshaler.Unmarshal(req.Body, reqContent); err != nil {
+		err = wrapErr(err, "failed to parse request json")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	// Call service method
+	var respContent *Nil
+	func() {
+		defer func() {
+			// In case of a panic, serve a 500 error and then panic.
+			if r := recover(); r != nil {
+				s.writeError(ctx, resp, twirp.InternalError("Internal service panic"))
+				panic(r)
+			}
+		}()
+		respContent, err = s.Execute(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *Nil and nil error while calling Execute. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	var buf bytes.Buffer
+	marshaler := &jsonpb.Marshaler{OrigName: true}
+	if err = marshaler.Marshal(&buf, respContent); err != nil {
+		err = wrapErr(err, "failed to marshal json response")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.WriteHeader(http.StatusOK)
+	if _, err = resp.Write(buf.Bytes()); err != nil {
+		log.Printf("errored while writing response to client, but already sent response status code to 200: %s", err)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *webhookServer) serveExecuteProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "Execute")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	defer closebody(req.Body)
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		err = wrapErr(err, "failed to read request body")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+	reqContent := new(WebhookData)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		err = wrapErr(err, "failed to parse request proto")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	// Call service method
+	var respContent *Nil
+	func() {
+		defer func() {
+			// In case of a panic, serve a 500 error and then panic.
+			if r := recover(); r != nil {
+				s.writeError(ctx, resp, twirp.InternalError("Internal service panic"))
+				panic(r)
+			}
+		}()
+		respContent, err = s.Execute(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *Nil and nil error while calling Execute. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		err = wrapErr(err, "failed to marshal proto response")
+		s.writeError(ctx, resp, twirp.InternalErrorWith(err))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.WriteHeader(http.StatusOK)
+	if _, err = resp.Write(respBytes); err != nil {
+		log.Printf("errored while writing response to client, but already sent response status code to 200: %s", err)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *webhookServer) ServiceDescriptor() ([]byte, int) {
+	return twirpFileDescriptor0, 2
+}
+
+func (s *webhookServer) ProtocGenTwirpVersion() string {
 	return "v5.2.0"
 }
 
@@ -901,44 +1316,47 @@ func callError(ctx context.Context, h *twirp.ServerHooks, err twirp.Error) conte
 }
 
 var twirpFileDescriptor0 = []byte{
-	// 617 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x94, 0xd1, 0x6e, 0xd3, 0x3c,
-	0x14, 0xc7, 0x95, 0xa6, 0xc9, 0xfa, 0x9d, 0x6e, 0xdd, 0x3e, 0x7f, 0x1f, 0x23, 0x14, 0x04, 0x51,
-	0x25, 0xa0, 0xdc, 0x84, 0x69, 0xac, 0x8c, 0xee, 0x72, 0x1b, 0x62, 0x13, 0x68, 0x42, 0x06, 0x84,
-	0xb4, 0x9b, 0xca, 0xad, 0xcd, 0x62, 0x35, 0xb1, 0x23, 0xdb, 0x99, 0xda, 0x0b, 0xde, 0x85, 0xf7,
-	0xe0, 0x05, 0x78, 0x0c, 0x1e, 0x05, 0xc5, 0x49, 0x47, 0x3a, 0x56, 0x76, 0x97, 0x73, 0xce, 0xaf,
-	0xf1, 0xbf, 0x7f, 0xff, 0x4f, 0xe0, 0xdf, 0x44, 0x4e, 0x49, 0xcc, 0x09, 0x4d, 0xb9, 0x88, 0x32,
-	0x25, 0x8d, 0x44, 0xdb, 0x17, 0xdc, 0xc4, 0xf9, 0x38, 0x9a, 0xb1, 0xa8, 0x1c, 0x46, 0x76, 0xda,
-	0x7b, 0x00, 0xad, 0xa3, 0x98, 0x4d, 0xa6, 0xa7, 0xc7, 0x1a, 0x6d, 0x81, 0xcb, 0xa9, 0x0e, 0x9c,
-	0xd0, 0xed, 0xff, 0x83, 0x8b, 0xc7, 0xde, 0x77, 0x07, 0xfc, 0x13, 0x46, 0x12, 0x13, 0x17, 0xc3,
-	0x5c, 0x25, 0x81, 0x13, 0x3a, 0xc5, 0x30, 0x57, 0x09, 0x3a, 0x80, 0x7b, 0x8a, 0xe9, 0x4c, 0x0a,
-	0xcd, 0x46, 0x86, 0xa7, 0x6c, 0x24, 0x88, 0x90, 0x9a, 0x4d, 0xa4, 0xa0, 0x3a, 0x68, 0x84, 0x4e,
-	0xdf, 0xc5, 0x77, 0x17, 0xc0, 0x47, 0x9e, 0xb2, 0xb3, 0xdf, 0x63, 0xf4, 0x08, 0xda, 0xda, 0x10,
-	0x93, 0xeb, 0xd1, 0x44, 0x52, 0x16, 0xb8, 0xa1, 0xd3, 0xf7, 0x30, 0x94, 0xad, 0x23, 0x49, 0x19,
-	0x42, 0xd0, 0x1c, 0x4b, 0x3a, 0x0f, 0x9a, 0xf6, 0x3c, 0xfb, 0x8c, 0xfe, 0x07, 0x8f, 0x29, 0x25,
-	0x55, 0xe0, 0xd9, 0x66, 0x59, 0xa0, 0x00, 0xd6, 0x62, 0x2b, 0x71, 0x1e, 0xf8, 0xa1, 0xd3, 0x6f,
-	0xe1, 0x45, 0xd9, 0xfb, 0xd9, 0x00, 0x17, 0xe7, 0x02, 0x75, 0xa0, 0xc1, 0x69, 0xa5, 0xbc, 0xc1,
-	0x29, 0xda, 0x83, 0xe6, 0x84, 0x57, 0x1a, 0xdb, 0xbb, 0x61, 0x74, 0xb3, 0x35, 0xd1, 0xc2, 0x17,
-	0x6c, 0x69, 0xd4, 0x85, 0xd6, 0x17, 0x2e, 0xb8, 0x8e, 0x19, 0xb5, 0x7a, 0x5b, 0xf8, 0xaa, 0x46,
-	0x87, 0xb0, 0xa6, 0x98, 0xce, 0x13, 0xa3, 0x83, 0x66, 0xe8, 0xf6, 0xdb, 0xbb, 0xfd, 0x55, 0x2f,
-	0xc5, 0xb9, 0x88, 0x70, 0x89, 0xbe, 0x16, 0x46, 0xcd, 0xf1, 0xe2, 0x87, 0xe8, 0x09, 0x6c, 0x6a,
-	0x43, 0x94, 0x29, 0xbd, 0xcc, 0x05, 0x9f, 0xd9, 0xff, 0xe9, 0xe2, 0x0d, 0xdb, 0x2e, 0x1c, 0xfc,
-	0x24, 0xf8, 0x0c, 0x3d, 0x87, 0xff, 0x58, 0x42, 0x32, 0xcd, 0xe8, 0x92, 0xe1, 0xbe, 0x65, 0x51,
-	0x35, 0xaa, 0x79, 0xdd, 0x3d, 0x87, 0xf5, 0xfa, 0x89, 0xc5, 0x4d, 0x4e, 0xd9, 0x7c, 0x71, 0x93,
-	0x53, 0x36, 0x47, 0x7b, 0xe0, 0x5d, 0x92, 0x24, 0x67, 0x95, 0x23, 0x0f, 0x57, 0x89, 0x2f, 0xa3,
-	0x80, 0x4b, 0xf8, 0xa0, 0xf1, 0xca, 0xe9, 0x79, 0xe0, 0x9e, 0xf1, 0xa4, 0xf7, 0xa3, 0x01, 0x1b,
-	0x27, 0x5c, 0x1b, 0x79, 0xa1, 0x48, 0x7a, 0x4c, 0x0c, 0x41, 0x4f, 0x61, 0x33, 0x25, 0xb3, 0x25,
-	0x85, 0x8e, 0x55, 0xd8, 0x49, 0xc9, 0xac, 0x9e, 0x84, 0x02, 0xe4, 0xe2, 0x86, 0xec, 0x74, 0x52,
-	0x2e, 0xea, 0xe0, 0x33, 0xd8, 0x4a, 0x19, 0x59, 0x26, 0x5d, 0x4b, 0x6e, 0x16, 0xfd, 0x3a, 0xba,
-	0x0d, 0xbe, 0x36, 0x94, 0xb2, 0x4b, 0x1b, 0x1f, 0x17, 0x57, 0x55, 0x71, 0x56, 0x36, 0xd8, 0x59,
-	0x7a, 0x43, 0x69, 0x71, 0x27, 0x1b, 0xec, 0x5c, 0x13, 0x95, 0xed, 0x0f, 0x6e, 0xf0, 0xb7, 0x93,
-	0xed, 0x0f, 0xae, 0x83, 0xc3, 0x65, 0x70, 0xad, 0x02, 0x87, 0x7f, 0x82, 0xc3, 0x25, 0xb0, 0xb5,
-	0x00, 0x87, 0x35, 0xb0, 0xf7, 0x15, 0xda, 0x9f, 0xd9, 0x38, 0x96, 0x72, 0x6a, 0x7d, 0xbc, 0x03,
-	0xbe, 0xca, 0xc5, 0xe8, 0x2a, 0xbf, 0x9e, 0xca, 0xc5, 0x29, 0x2d, 0xf6, 0x67, 0x52, 0xc4, 0x73,
-	0x64, 0xb7, 0xdb, 0x3a, 0xb6, 0x8e, 0xc1, 0xb6, 0xde, 0xdb, 0x7d, 0x7f, 0x09, 0x7e, 0xb9, 0x06,
-	0xd6, 0xa3, 0xdb, 0xef, 0xb4, 0xa2, 0x77, 0xbf, 0x39, 0xd0, 0xc2, 0xb9, 0x78, 0x27, 0x27, 0x24,
-	0x41, 0x6f, 0xc0, 0xb7, 0x4b, 0xa0, 0xd1, 0xad, 0x4b, 0xd2, 0xbd, 0xff, 0x97, 0xc4, 0xa3, 0xb7,
-	0xe0, 0x7d, 0x30, 0xc4, 0x68, 0xb4, 0x92, 0x3a, 0xe3, 0x49, 0xf7, 0xf1, 0x4a, 0x8d, 0xf5, 0x68,
-	0x1d, 0x6e, 0x9c, 0xb7, 0x6b, 0xdf, 0xb7, 0xb1, 0x6f, 0x2d, 0x78, 0xf1, 0x2b, 0x00, 0x00, 0xff,
-	0xff, 0x0f, 0x7b, 0xb8, 0x03, 0xf5, 0x04, 0x00, 0x00,
+	// 664 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xdd, 0x6e, 0xd3, 0x4a,
+	0x10, 0x96, 0xe3, 0xd8, 0x49, 0xc6, 0x6d, 0xcf, 0x39, 0x7b, 0xce, 0x01, 0x13, 0x7e, 0x1a, 0x0c,
+	0x42, 0xb9, 0x0a, 0x52, 0x5a, 0x21, 0xd4, 0x3b, 0xfa, 0x23, 0x88, 0x40, 0xbd, 0x58, 0x28, 0x54,
+	0xbd, 0x89, 0x1c, 0xef, 0x40, 0x56, 0x71, 0xd7, 0x61, 0x7f, 0x4a, 0xf2, 0x18, 0x3c, 0x0f, 0x2f,
+	0xc3, 0x7b, 0x70, 0x83, 0xbc, 0xeb, 0xb4, 0x46, 0x22, 0xad, 0xb8, 0xdb, 0x99, 0xf9, 0x66, 0x76,
+	0xe6, 0xdb, 0x6f, 0x16, 0xfe, 0xc9, 0x8b, 0x59, 0x3a, 0xe5, 0x29, 0x3b, 0xe7, 0x62, 0x30, 0x97,
+	0x85, 0x2e, 0xc8, 0xad, 0x4f, 0x5c, 0x4f, 0xcd, 0x64, 0xb0, 0xc0, 0x81, 0x0b, 0x0e, 0x6c, 0x34,
+	0xb9, 0x07, 0xed, 0x83, 0x29, 0x66, 0xb3, 0xd1, 0xa1, 0x22, 0x7f, 0x83, 0xcf, 0x99, 0x8a, 0xbd,
+	0x9e, 0xdf, 0xef, 0xd0, 0xf2, 0x98, 0x9c, 0x02, 0x50, 0x23, 0x28, 0x7e, 0x36, 0xa8, 0x34, 0xd9,
+	0x81, 0x20, 0x2b, 0xb1, 0xb1, 0xd7, 0xf3, 0xfa, 0xd1, 0xf0, 0xfe, 0xe0, 0xf7, 0x35, 0x07, 0xb6,
+	0x20, 0x75, 0x58, 0xf2, 0x3f, 0x84, 0xd2, 0x88, 0x31, 0x67, 0x71, 0xa3, 0xe7, 0xf5, 0x3b, 0x34,
+	0x90, 0x46, 0x8c, 0x58, 0xf2, 0xcd, 0x83, 0xf0, 0x15, 0xa6, 0xb9, 0x9e, 0x96, 0xd7, 0x1a, 0x99,
+	0xdb, 0xa2, 0x1d, 0x5a, 0x1e, 0xc9, 0x1e, 0xdc, 0x91, 0xa8, 0xe6, 0x85, 0x50, 0x38, 0xd6, 0xfc,
+	0x1c, 0xc7, 0x22, 0x15, 0x85, 0xc2, 0xac, 0x10, 0x4c, 0xd9, 0x32, 0x3e, 0xbd, 0xbd, 0x02, 0xbc,
+	0xe3, 0xe7, 0x78, 0x7c, 0x15, 0x26, 0xdb, 0x10, 0x29, 0x9d, 0x6a, 0xa3, 0xc6, 0x59, 0xc1, 0x30,
+	0xf6, 0x7b, 0x5e, 0x3f, 0xa0, 0xe0, 0x5c, 0x07, 0x05, 0x43, 0x42, 0xa0, 0x39, 0x29, 0xd8, 0x32,
+	0x6e, 0xda, 0xfb, 0xec, 0x99, 0xfc, 0x07, 0x01, 0x4a, 0x59, 0xc8, 0x38, 0x70, 0x3d, 0x5a, 0x83,
+	0xc4, 0xd0, 0x9a, 0xda, 0x16, 0x97, 0x71, 0xd8, 0xf3, 0xfa, 0x6d, 0xba, 0x32, 0x93, 0xef, 0x0d,
+	0xf0, 0xa9, 0x11, 0x64, 0x0b, 0x1a, 0x9c, 0x55, 0x9d, 0x37, 0x38, 0x23, 0xbb, 0xd0, 0xcc, 0x78,
+	0xd5, 0x63, 0x34, 0xec, 0x5d, 0x4b, 0xd0, 0xe8, 0x50, 0x51, 0x8b, 0x26, 0x5d, 0x68, 0x7f, 0xe4,
+	0x82, 0xab, 0x29, 0x32, 0xdb, 0x6f, 0x9b, 0x5e, 0xda, 0x64, 0x1f, 0x5a, 0x12, 0x95, 0xc9, 0xb5,
+	0x8a, 0x9b, 0x3d, 0xbf, 0x1f, 0x0d, 0xfb, 0xeb, 0x8a, 0x52, 0x23, 0x06, 0xd4, 0x41, 0x8f, 0x84,
+	0x96, 0x4b, 0xba, 0x4a, 0x24, 0x4f, 0xe0, 0x2f, 0xa5, 0x53, 0xa9, 0x1d, 0x97, 0x46, 0xf0, 0x85,
+	0x9d, 0xd3, 0xa7, 0x9b, 0xd6, 0x5d, 0x32, 0x78, 0x22, 0xf8, 0x82, 0x3c, 0x85, 0x7f, 0x31, 0x4f,
+	0xe7, 0x0a, 0xd9, 0x2f, 0x84, 0x87, 0x16, 0x4b, 0xaa, 0x50, 0x8d, 0xeb, 0xee, 0x19, 0x6c, 0xd4,
+	0x6f, 0x2c, 0x5f, 0x72, 0x86, 0xcb, 0xd5, 0x4b, 0xce, 0x70, 0x49, 0x76, 0x21, 0xb8, 0x48, 0x73,
+	0x83, 0x15, 0x23, 0x0f, 0xd6, 0x35, 0xef, 0xa4, 0x40, 0x1d, 0x78, 0xaf, 0xf1, 0xdc, 0x4b, 0x02,
+	0xf0, 0x8f, 0x79, 0x9e, 0xfc, 0xf0, 0x20, 0xb0, 0x74, 0xd5, 0xb8, 0x0e, 0x2c, 0xd7, 0x04, 0x9a,
+	0xc6, 0x5c, 0xca, 0xca, 0x9e, 0xcb, 0x49, 0x33, 0x89, 0xa9, 0x46, 0x36, 0x4e, 0xb5, 0x9b, 0xd4,
+	0x77, 0x93, 0x56, 0xee, 0x17, 0xda, 0x4e, 0xfa, 0x18, 0xb6, 0x90, 0xf1, 0x3a, 0xac, 0x69, 0x61,
+	0x1b, 0xce, 0x5b, 0xa1, 0x2a, 0x61, 0x06, 0x57, 0xc2, 0xdc, 0x86, 0xe8, 0x0b, 0x4e, 0xa6, 0x45,
+	0x31, 0x1b, 0x97, 0x91, 0xd0, 0x46, 0xa0, 0x72, 0x9d, 0xc8, 0xdc, 0x0a, 0xe9, 0x02, 0xe5, 0x32,
+	0x6e, 0xd9, 0x3e, 0x9d, 0x41, 0x1e, 0xc2, 0xc6, 0x3c, 0x4f, 0x97, 0x93, 0x55, 0x5e, 0xdb, 0xe6,
+	0x45, 0x2b, 0x5f, 0x95, 0x58, 0x6a, 0x14, 0xe3, 0x8e, 0x53, 0xa0, 0x35, 0x92, 0xaf, 0x1e, 0x44,
+	0x1f, 0x5c, 0xf5, 0xc3, 0x54, 0xa7, 0xb5, 0x65, 0xf2, 0x6a, 0xcb, 0x74, 0xb5, 0x98, 0x8d, 0x3f,
+	0x58, 0xcc, 0x67, 0x10, 0x3a, 0x39, 0x5b, 0x8a, 0x6e, 0x7e, 0x9b, 0x0a, 0x3d, 0x7c, 0x0b, 0x6d,
+	0x6a, 0xc4, 0x9b, 0x22, 0x4b, 0x73, 0xf2, 0x12, 0x42, 0x5b, 0x53, 0x91, 0x1b, 0xb5, 0xde, 0xbd,
+	0x7b, 0x8d, 0x70, 0x87, 0xa7, 0x10, 0xb9, 0x6b, 0xdc, 0x5b, 0x8f, 0xdc, 0x7a, 0x25, 0xd7, 0xa4,
+	0x54, 0x9f, 0x52, 0xf7, 0x86, 0xb6, 0x87, 0xef, 0xa1, 0x55, 0x31, 0x48, 0x5e, 0x43, 0xeb, 0x68,
+	0x81, 0x99, 0xd1, 0x48, 0x1e, 0xad, 0xcb, 0xaa, 0xb1, 0xbd, 0xbe, 0xe3, 0x63, 0x9e, 0xef, 0x6f,
+	0x9e, 0x45, 0xb5, 0x5f, 0x76, 0x12, 0xda, 0x6f, 0x76, 0xe7, 0x67, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0x94, 0xf5, 0xc3, 0x18, 0x7b, 0x05, 0x00, 0x00,
 }

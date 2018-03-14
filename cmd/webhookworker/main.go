@@ -101,21 +101,16 @@ func main() {
 			return
 		}
 
-		c := &lokahi.Check{}
-		err = proto.Unmarshal(wd.CheckProto, c)
-		if err != nil {
-			ln.Error(ctx, err, ln.Action("nats webhook.egress handler"))
-			return
-		}
+		c := wd.Check.DatabaseCheck()
 
 		if wd.Health.Healthy {
-			c.State = lokahi.Check_UP
+			c.State = lokahi.Check_UP.String()
 		} else {
-			c.State = lokahi.Check_DOWN
+			c.State = lokahi.Check_DOWN.String()
 		}
 
 		if wd.Health.Error != "" {
-			c.State = lokahi.Check_ERROR
+			c.State = lokahi.Check_ERROR.String()
 
 			nc.Publish("check.errors", m.Data)
 		}

@@ -27,6 +27,10 @@
     {
       "Repository": "github.com/elliots/protoc-gen-twirp_swagger",
       "Commit": "5f13214f71d7b2425fecd1751e7330173124d0ea"
+    },
+    {
+      "Repository": "github.com/rapidloop/nrpc/protoc-gen-nrpc",
+      "Commit": "13666f5621442975e1b468b9c243a7db7390f740"
     }
   ],
   "RetoolVersion": "1.3.5"

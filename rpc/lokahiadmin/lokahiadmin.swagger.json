@@ -16,6 +16,32 @@
     "application/json"
   ],
   "paths": {
+    "/twirp/github.xe.lokahi.admin.HealthCheck/Run": {
+      "post": {
+        "operationId": "Run",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/adminHealth"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/adminRunRequest"
+            }
+          }
+        ],
+        "tags": [
+          "HealthCheck"
+        ]
+      }
+    },
     "/twirp/github.xe.lokahi.admin.RunLocal/Checks": {
       "post": {
         "operationId": "Checks",
@@ -42,14 +68,14 @@
         ]
       }
     },
-    "/twirp/github.xe.lokahi.admin.RunLocal/Stats": {
+    "/twirp/github.xe.lokahi.admin.Webhook/Execute": {
       "post": {
-        "operationId": "Stats",
+        "operationId": "Execute",
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/adminHistogramData"
+              "$ref": "#/definitions/adminNil"
             }
           }
         },
@@ -59,17 +85,54 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/adminNil"
+              "$ref": "#/definitions/adminWebhookData"
             }
           }
         ],
         "tags": [
-          "RunLocal"
+          "Webhook"
         ]
       }
     }
   },
   "definitions": {
+    "adminCheck": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uuid": {
+          "type": "string"
+        },
+        "created_at_unix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "edited_at_unix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "url": {
+          "type": "string"
+        },
+        "webhook_url": {
+          "type": "string"
+        },
+        "every": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "playbook_url": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "title": "Check is the database check structure.\nhttps://github.com/Xe/lokahi/blob/master/internal/database/check.go"
+    },
     "adminCheckIDs": {
       "type": "object",
       "properties": {
@@ -107,52 +170,6 @@
         }
       }
     },
-    "adminHistogramData": {
-      "type": "object",
-      "properties": {
-        "max_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "max_nanoseconds is the maximum http web response time in nanoseconds."
-        },
-        "min_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "min_nanoseconds is the minimum http web response time in nanoseconds."
-        },
-        "mean_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "mean_nanoseconds is the mean http web response time in nanoseconds."
-        },
-        "stddev": {
-          "type": "string",
-          "format": "int64",
-          "description": "stddev is the standard deviation from the mean."
-        },
-        "p50_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "p50_nanoseconds is the 50th percentile of the http web response times in\nnanoseconds."
-        },
-        "p75_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "p75_nanoseconds is the 75th percentile of the http web response times in\nnanoseconds."
-        },
-        "p95_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "p95_nanoseconds is the 95th percentile of the http web response times in\nnanoseconds."
-        },
-        "p99_nanoseconds": {
-          "type": "string",
-          "format": "int64",
-          "description": "p99_nanoseconds is the 95th percentile of the http web response times in\nnanoseconds."
-        }
-      },
-      "description": "HistogramData contains information from the HDR histogram maintained for\neach check."
-    },
     "adminNil": {
       "type": "object"
     },
@@ -182,6 +199,32 @@
         "elapsed_nanoseconds": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "adminRunRequest": {
+      "type": "object",
+      "properties": {
+        "check": {
+          "$ref": "#/definitions/adminCheck"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      },
+      "description": "RunRequest is a request for a healthcheck being run."
+    },
+    "adminWebhookData": {
+      "type": "object",
+      "properties": {
+        "run_id": {
+          "type": "string"
+        },
+        "check": {
+          "$ref": "#/definitions/adminCheck"
+        },
+        "health": {
+          "$ref": "#/definitions/adminHealth"
         }
       }
     }
